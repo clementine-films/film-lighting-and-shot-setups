@@ -1336,7 +1336,7 @@ function panelShot(){
   return `<div class="pTitle"><span class="sNum">${esc(sc.num)}</span> Scene</div><div class="pSub">${esc(sceneHeading(sc))}</div>
    <div class="f2">${fld('Scene #',`<input class="in" data-o="scene" data-k="num" value="${esc(sc.num)}">`)}${fld('Int / Ext',`<select class="in" data-o="scene" data-k="ie">${['INT.','EXT.','INT./EXT.'].map(o=>`<option ${o===sc.ie?'selected':''}>${o}</option>`).join('')}</select>`)}</div>
    ${fld('Location',`<input class="in" data-o="scene" data-k="loc" value="${esc(sc.loc)}">`)}
-   ${fld('Time',`<select class="in" data-o="scene" data-k="tod">${['DAY','NIGHT','DAWN','DUSK','MAGIC HOUR','CONTINUOUS','LATER'].map(o=>`<option ${o===sc.tod?'selected':''}>${o}</option>`).join('')}</select>`)}
+   ${fld('Time',`<input class="in" data-o="scene" data-k="tod" list="todList" value="${esc(sc.tod)}" placeholder="DAY, NIGHT, or type your own"><datalist id="todList">${['DAY','NIGHT','DAWN','DUSK','MAGIC HOUR','CONTINUOUS','LATER','MOMENTS LATER','SAME'].map(o=>`<option value="${o}">`).join('')}</datalist>`)}
    <div class="f"><label>Scene description</label><textarea class="in" data-o="scene" data-k="desc" rows="3" placeholder="What happens; tone; story beats">${esc(sc.desc)}</textarea></div>
    <div class="grp"><h4>Lighting setup</h4>
    ${fld('Setup name',`<input class="in" data-o="setup" data-k="name" value="${esc(su.name)}">`)}
