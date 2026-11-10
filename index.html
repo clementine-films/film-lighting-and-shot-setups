@@ -1355,6 +1355,7 @@ function panelShot(){
    ${fld('Setup name',`<input class="in" data-o="setup" data-k="name" value="${esc(su.name)}">`)}
    <div class="f"><label>Lighting intent</label><textarea class="in" data-o="setup" data-k="notes" rows="3" placeholder="Motivation, mood, contrast ratio, references">${esc(su.notes)}</textarea></div></div>
    <div class="grp"><h4>Shot ${esc(sh.num)}</h4>
+   ${fld('In setup',`<select class="in" data-mvsu="1">${sc.setups.map(x=>`<option value="${x.id}" ${x.id===su.id?'selected':''}>${esc(x.name)}</option>`).join('')}<option value="__new">New setup…</option></select>`)}
    <div class="f2">${fld('Shot #',`<input class="in" data-o="shot" data-k="num" value="${esc(sh.num)}">`)}${fld('Size',`<select class="in" data-o="shot" data-k="size">${optList(SIZES,sh.size)}</select>`)}</div>
    <div class="f2">${fld('Angle',`<select class="in" data-o="shot" data-k="angle">${optList(ANGLES,sh.angle)}</select>`)}${fld('Movement',`<select class="in" data-o="shot" data-k="move">${optList(MOVES,sh.move)}</select>`)}</div>
    <div class="f"><label>Description</label><textarea class="in" data-o="shot" data-k="desc" rows="2" placeholder="What the shot shows">${esc(sh.desc)}</textarea></div>
@@ -1748,6 +1749,15 @@ function extraAct(act){const it=selItem();
 function panelClickExtra(e){const j=e.target.closest('[data-shotjump]');if(j){gotoShot(j.dataset.shotjump);return true;}
   const m=e.target.closest('mark[data-shot]');if(m){const s=window.getSelection();if(s&&!s.isCollapsed)return true;if(m.dataset.shot!==shot().id)gotoShot(m.dataset.shot);return true;}return false;}
 
+
+/* ---- move a shot to another setup in the same scene ---- */
+function moveShotTo(id){const sc=scene(),su=setup(),sh=shot();let to=id==='__new'?null:sc.setups.find(x=>x.id===id);if(id!=='__new'&&(!to||to===su))return;snap();
+  if(!to){to=mkSetup('Setup '+String.fromCharCode(65+Math.min(25,sc.setups.length)));sc.setups.push(to);}
+  su.shots=su.shots.filter(x=>x.id!==sh.id);to.shots.push(sh);
+  if(!su.shots.length){if(!su.items.length&&!su.notes)sc.setups=sc.setups.filter(x=>x!==su);else su.shots.push(mkShot(nextShotNum(sc)));}
+  try{linkOrphans(P);}catch(e){}
+  V.setupId=to.id;V.shotId=sh.id;V.sel=null;fixView();changed();toast(`Shot ${sh.num} moved to ${to.name}`);}
+document.getElementById('panel').addEventListener('change',e=>{if(e.target.dataset&&e.target.dataset.mvsu){e.stopPropagation();moveShotTo(e.target.value);}},true);
 const BRANDFF=(()=>{let o='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.type===5&&/EB Garamond|Lato/.test(r.cssText))o+=r.cssText;}catch(e){}}return o;})();
 /* ============================================================
    Export
