@@ -242,6 +242,7 @@ body.narrow #left{left:0} body.narrow #right{right:0}
       <div class="menu" id="exportMenu">
         <button data-x="sheet">Shot sheet (PNG or SVG)…<small>Pick the fields and layers to include, with a preview</small></button>
         <button data-x="shotlist">Shot list…<small>Every shot in one table; import or edit</small></button>
+        <button data-x="sdimport">Import from Script Desk…<small>Scenes, sides and setups from your marked-up script</small></button>
         <button data-x="shotcsv">Shot list — CSV</button>
         <button data-x="gearcsv">Gear list (project) — CSV</button>
         <hr>
@@ -1663,13 +1664,13 @@ function openShotList(){
     return `<tr class="${sh.id===cur?'cur':''}"><td><span class="sNum">${esc(sc.num)}</span></td><td>${esc(su.name)}</td><td>${inp2('num',52)}</td><td>${sel2('size',SIZES,sh.size,74)}</td><td>${sel2('angle',ANGLES,sh.angle,100)}</td><td>${sel2('move',MOVES,sh.move,100)}</td><td class="n" style="text-align:left">${esc(cams.map(lensLabel).join(' / ')||'—')}</td><td>${inp2('desc',230)}</td><td>${esc(cast||'—')}</td><td class="n">${items.filter(i=>LIB[i.t]&&LIB[i.t].kind==='light').length}</td><td class="n">${fmtW(powerFor(items).total)}</td><td style="text-align:center;color:${(sh.cover||[]).length?'var(--green)':'var(--dim)'}">${(sh.cover||[]).length?'✓':'—'}</td><td>${sel2('status',STATUSES,st,104)}</td><td><button class="btn sm" data-goto="${sh.id}">Open</button></td></tr>`;}).join('');
   openModal(`<h3>Shot list</h3><div class="pSub">${rows.length} shot${rows.length===1?'':'s'} · ${done} diagrammed or further along. Edit any cell here; <b>Open</b> jumps to that shot's diagram. Lens, cast, lights and power come from what's on the plan.</div>
    <div class="slWrap"><table class="t"><tr><th>Sc</th><th>Setup</th><th>Shot</th><th>Size</th><th>Angle</th><th>Move</th><th>Lens</th><th>Description</th><th>Cast</th><th style="text-align:right">Lights</th><th style="text-align:right">Power</th><th>Script</th><th>Status</th><th></th></tr>${body}</table></div>
-   <div class="mFoot" style="justify-content:space-between"><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" id="slImport">Import a shot list…</button><button class="btn" id="slCSV">Download CSV</button><button class="btn" id="slCopy">Copy for a spreadsheet</button></div><button class="btn pri" data-close>Done</button></div>`,'wide');
+   <div class="mFoot" style="justify-content:space-between"><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" id="slImport">Import a shot list…</button><button class="btn" id="slSD">Import from Script Desk…</button><button class="btn" id="slCSV">Download CSV</button><button class="btn" id="slCopy">Copy for a spreadsheet</button></div><button class="btn pri" data-close>Done</button></div>`,'wide');
   let snapped=false;const mb=$('#modalBox');
   mb.onchange=e=>{const t=e.target;if(!t.dataset.sl)return;const r=allShots().find(x=>x.sh.id===t.dataset.sl);if(!r)return;if(!snapped){snap();snapped=true;}r.sh[t.dataset.k]=t.value;changed(true);};
   mb.onclick=e=>{const g=e.target.closest('[data-goto]');if(g){closeModal();gotoShot(g.dataset.goto);return;}
     if(e.target.id==='slCSV')saveFile(`shot-list-${slug(P.title)}.csv`,shotRowsCSV());
     if(e.target.id==='slCopy'){const tsv=shotRowsCSV().split('\n').map(l=>{const out=[];let cur='',q=false;for(let i=0;i<l.length;i++){const c=l[i];if(q){if(c==='"'){if(l[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=c;}else if(c==='"')q=true;else if(c===','){out.push(cur);cur='';}else cur+=c;}out.push(cur);return out.map(x=>x.replace(/\s+/g,' ')).join('\t');}).join('\n');navigator.clipboard.writeText(tsv).then(()=>toast('Shot list copied — paste it into Sheets or Excel'),()=>showText('Shot list',tsv));}
-    if(e.target.id==='slImport')openShotImport();};
+    if(e.target.id==='slImport')openShotImport();if(e.target.id==='slSD')openSDImport();};
 }
 function parseDelimited(txt){const d=txt.indexOf('\t')>=0?'\t':',';const rows=[];let row=[],cur='',q=false;
   for(let i=0;i<txt.length;i++){const c=txt[i];if(q){if(c==='"'){if(txt[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=c;}else if(c==='"'&&cur==='')q=true;else if(c===d){row.push(cur);cur='';}else if(c==='\n'){row.push(cur);rows.push(row);row=[];cur='';}else if(c!=='\r')cur+=c;}
@@ -1692,6 +1693,30 @@ function openShotImport(){openModal(`<h3>Import a shot list</h3><div class="pSub
   <textarea class="in" id="slPaste" style="height:240px;font:12px var(--mono)" placeholder="Scene&#9;Shot&#9;Size&#9;Movement&#9;Description&#10;1&#9;1A&#9;WS&#9;Static&#9;Master — Maya enters&#10;1&#9;1B&#9;MCU&#9;Push in&#9;Jonah stands"></textarea>
   <div class="mFoot"><button class="btn" id="slBack">Back</button><button class="btn pri" id="slGo">Import</button></div>`);
   $('#slBack').onclick=openShotList;$('#slGo').onclick=()=>{const r=importShotList($('#slPaste').value);if(r.err){toast(r.err);return;}toast(`${r.added} shot${r.added===1?'':'s'} added, ${r.updated} updated`);openShotList();};}
+/* ---- link from Script Desk: scenes, sides and setups in one file ---- */
+const sdHash=t=>{let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return h+':'+t.length;};
+function applyScriptDesk(o,withText){const IE={'INT':'INT.','EXT':'EXT.','INT/EXT':'INT./EXT.','EXT/INT':'INT./EXT.','EST':'EXT.','INT.':'INT.','EXT.':'EXT.','INT./EXT.':'INT./EXT.'};let scN=0,scU=0,shN=0,shU=0,linked=0;
+  o.scenes.forEach(x=>{const num=String(x.num||'').trim();if(!num)return;let sc=P.scenes.find(s=>String(s.num).toLowerCase()===num.toLowerCase());const fresh=!sc;if(!sc){sc=mkScene(num);P.scenes.push(sc);scN++;}else scU++;
+    const own=fresh||sc.sd;if(x.ie&&IE[x.ie]&&(own||sc.loc==='LOCATION'))sc.ie=IE[x.ie];if(x.loc&&(own||sc.loc==='LOCATION'))sc.loc=x.loc;if(x.tod&&own)sc.tod=x.tod;if(x.syn&&(!sc.desc||sc.sdDesc===sc.desc)){sc.desc=x.syn;sc.sdDesc=x.syn;}
+    const text=withText&&typeof x.text==='string'?x.text:null;if(text!=null&&(!sc.script||sc.sdH===sdHash(sc.script))){sc.script=text;sc.sdH=sdHash(text);}sc.sd=1;
+    (x.setups||[]).forEach(u=>{const sn=String(u.label||'').trim();if(!sn)return;let sh=null;sc.setups.forEach(su=>su.shots.forEach(q=>{if(String(q.num).toLowerCase()===sn.toLowerCase())sh=q;}));
+      if(!sh){const su=sc.setups[0];sh=su.shots.find(q=>!q.desc&&!q.items.length&&!q.notes&&!(q.cover||[]).length&&!q.sd);if(sh)sh.num=sn;else{sh=mkShot(sn);su.shots.push(sh);}shN++;}else shU++;
+      sh.sd=1;if(u.desc&&(!sh.desc||sh.sdDesc===sh.desc)){sh.desc=u.desc;sh.sdDesc=u.desc;const low=u.desc.toLowerCase();const z=SIZES.find(k=>low===k.toLowerCase()||low.startsWith(k.toLowerCase()+' ')||low.startsWith(k.toLowerCase()+','));if(z)sh.size=z;}
+      if(u.shot)sh.status='Shot';
+      if(text!=null&&sc.script===text&&u.e>u.s&&u.e<=text.length){sh.cover=[{s:u.s,e:u.e,t:text.slice(u.s,u.e)}];linked++;}});});
+  return {scN,scU,shN,shU,linked};}
+function importScriptDesk(raw){let o;try{o=typeof raw==='string'?JSON.parse(raw):raw;}catch(e){return {err:'That text isn’t a Script Desk file. In Script Desk, use More → Send to the Lighting Plot, then paste or choose what it gives you.'};}
+  if(!o||o.kind!=='scriptdesk-link'||!Array.isArray(o.scenes))return {err:'That isn’t a Script Desk link file.'};if(!o.scenes.length)return {err:'That file has no scenes in it.'};
+  snap();const before=JSON.stringify(P);let r=applyScriptDesk(o,true);r.text=true;
+  if(JSON.stringify(P).length>225000){P=JSON.parse(before);r=applyScriptDesk(o,false);r.text=false;}
+  normalize(P);fixView();changed();return r;}
+function openSDImport(){openModal(`<h3>Import from Script Desk</h3><div class="pSub">In Script Desk, choose <b>More → Send to the Lighting Plot</b>, then download the file or copy it. Each scene arrives with its heading and script pages, and each setup becomes a shot linked to the lines it covers. Importing again updates the same scenes and shots; anything you’ve drawn stays put.</div>
+  <div style="margin:10px 0"><button class="btn pri" id="sdPick">Choose the Script Desk file</button></div>
+  <div class="f"><label>Or paste what you copied</label><textarea class="in" id="sdPaste" style="height:120px;font:11px var(--mono)" placeholder='{"kind":"scriptdesk-link", …}'></textarea></div>
+  <div class="mFoot"><button class="btn" id="sdBack">Back</button><button class="btn pri" id="sdGo">Import pasted text</button></div>`);
+  const done=r=>{if(r.err){toast(r.err);return;}toast(`${r.scN} scene${r.scN===1?'':'s'} added, ${r.scU} updated · ${r.shN} shot${r.shN===1?'':'s'} added, ${r.shU} updated${r.text?'':' · script text left out: it would not fit in this project'}`);openShotList();setTimeout(fit,50);};
+  $('#sdBack').onclick=openShotList;$('#sdGo').onclick=()=>{const t=$('#sdPaste').value.trim();if(!t){toast('Paste the copied text first');return;}done(importScriptDesk(t));};
+  $('#sdPick').onclick=()=>{const f=document.createElement('input');f.type='file';f.accept='.json,application/json';f.onchange=async()=>{const file=f.files[0];if(!file)return;try{done(importScriptDesk(await file.text()));}catch(e){toast('That file could not be read');}};f.click();};}
 $('#bShotList').onclick=openShotList;
 
 /* extra panel actions (shared by the side panel and the quick bar) */
@@ -1813,6 +1838,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('.menuWrap'))$('#expo
 $('#exportMenu').addEventListener('click',e=>{const b=e.target.closest('[data-x]');if(!b)return;$('#exportMenu').classList.remove('open');const x=b.dataset.x;
   if(x==='sheet')openExport();
   else if(x==='shotlist')openShotList();
+  else if(x==='sdimport')openSDImport();
   else if(x==='shotcsv')saveFile(`shot-list-${slug(P.title)}.csv`,shotRowsCSV());
   else if(x==='gearcsv')saveFile(`gear-${slug(P.title)}.csv`,gearCSV('project'));
   else if(x==='json')saveFile(`${slug(P.title)}.lightplot.json`,JSON.stringify(P,null,1));
