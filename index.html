@@ -7,13 +7,13 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#111315;--panel:#17191c;--panel2:#1d2024;--line:#2a2e34;--line2:#353a41;
   --text:#e3e6ea;--sub:#8d949e;--dim:#5f6670;
   --amber:#bd5103;--amber2:#f0935a;--teal:#4fd1c5;--blue:#5cb8ff;--red:#ff6b6b;--green:#7bd88f;--violet:#b48cff;
-  --sans:'IBM Plex Sans',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;
+  --sans:Lato,system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/1.4 var(--sans);overflow:hidden}
@@ -160,7 +160,7 @@ table.t td.n{font-family:var(--mono);text-align:right;white-space:nowrap}
 #modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:100}
 #modal.open{display:flex}
 #modalBox{background:var(--panel);border:1px solid var(--line2);border-radius:10px;width:min(560px,92vw);max-height:84vh;overflow:auto;padding:18px 20px;box-shadow:0 20px 50px rgba(0,0,0,.6)}
-#modalBox h3{margin:0 0 10px;font-size:15px}
+#modalBox h3{margin:0 0 10px;font:500 21px/1.2 'EB Garamond',Garamond,Georgia,serif}
 .mFoot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 .projRow{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--line2);border-radius:7px;margin-bottom:6px}
 .projRow.cur{border-color:var(--amber)}
@@ -627,8 +627,8 @@ function lightNumbers(items){const m={};let n=1;items.forEach(it=>{const L=LIB[i
    Rendering (shared by canvas + export sheet)
    ============================================================ */
 const THEMES={
-  dark:{bg:'#1b1e22',grid:'#23272c',grid5:'#2e333a',wall:'#d2d7de',setFill:'#262b31',setStroke:'#59616c',text:'#dfe3e8',sub:'#8a929d',grip:'#b8c0ca',solid:'#07080a',white:'#eef1f4',beamA:.38,badge:'#f2a93b',badgeText:'#1a1205',font:"'IBM Plex Sans',system-ui,sans-serif",mono:"'IBM Plex Mono',monospace"},
-  paper:{bg:'#ffffff',grid:'#eef0f3',grid5:'#dde1e6',wall:'#1d2024',setFill:'#f1f3f5',setStroke:'#8f98a3',text:'#1d2024',sub:'#5f6773',grip:'#3a4049',solid:'#16181b',white:'#ffffff',beamA:.55,badge:'#1d2024',badgeText:'#ffffff',font:"Helvetica,Arial,sans-serif",mono:"Menlo,Consolas,monospace"},
+  dark:{bg:'#1b1e22',grid:'#23272c',grid5:'#2e333a',wall:'#d2d7de',setFill:'#262b31',setStroke:'#59616c',text:'#dfe3e8',sub:'#8a929d',grip:'#b8c0ca',solid:'#07080a',white:'#eef1f4',beamA:.38,badge:'#f2a93b',badgeText:'#1a1205',font:"Lato,Helvetica,Arial,sans-serif",mono:"Lato,Helvetica,Arial,sans-serif"},
+  paper:{bg:'#ffffff',grid:'#eef0f3',grid5:'#dde1e6',wall:'#1d2024',setFill:'#f1f3f5',setStroke:'#8f98a3',text:'#1d2024',sub:'#5f6773',grip:'#3a4049',solid:'#16181b',white:'#ffffff',beamA:.55,badge:'#1d2024',badgeText:'#ffffff',font:"Lato,Helvetica,Arial,sans-serif",mono:"Lato,Helvetica,Arial,sans-serif"},
 };
 function fabricFill(f,C){if(/solid/i.test(f))return {fill:C.solid,op:1,dash:''};if(/net/i.test(f))return {fill:'none',op:1,dash:'0.15 0.15'};if(/bounce|muslin|beadboard/i.test(f))return {fill:C.white,op:.9,dash:''};if(/grid/i.test(f))return {fill:'#cfd8e3',op:.45,dash:''};return {fill:'#f1f4f8',op:.55,dash:''};}
 
