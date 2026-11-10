@@ -43,7 +43,7 @@ button{cursor:pointer}
 #saveStat i{width:7px;height:7px;border-radius:50%;background:var(--dim);display:inline-block}
 #saveStat.ok i{background:var(--green)} #saveStat.busy i{background:var(--amber)} #saveStat.warn i{background:var(--red)}
 .menuWrap{position:relative}
-.menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:5px;min-width:240px;z-index:50;box-shadow:0 12px 30px rgba(0,0,0,.5);display:none}
+.menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:5px;min-width:240px;z-index:50;box-shadow:0 12px 30px rgba(0,0,0,.5);display:none;max-height:calc(100vh - 62px);max-height:calc(100dvh - 62px);overflow-y:auto;overscroll-behavior:contain;max-width:calc(100vw - 12px)}
 .menu.open{display:block}
 .menu button{display:block;width:100%;text-align:left;background:none;border:0;padding:7px 10px;border-radius:5px;font-size:12px}
 .menu button:hover{background:#2a2f36}
