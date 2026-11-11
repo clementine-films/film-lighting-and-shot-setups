@@ -299,6 +299,7 @@ body.narrow #left{left:0} body.narrow #right{right:0}
       <button class="rtab" data-t="shot">Shot</button>
       <button class="rtab" data-t="script">Script</button>
       <button class="rtab" data-t="power">Power</button>
+      <button class="rtab" data-t="sun">Sun</button>
       <button class="rtab" data-t="gear">Gear</button>
     </div>
     <div id="panel"></div>
@@ -1813,6 +1814,115 @@ cv.addEventListener('dblclick',e=>{if(V.draft)return;const g=e.target.closest('[
 /* lock walls so placing gear can't nudge them */
 {const _rt=renderTools;renderTools=function(){_rt();const vb=$('#viewBar');if(vb&&!vb.querySelector('#tLock'))vb.querySelector('#tGhost').closest('label').insertAdjacentHTML('afterend',`<label class="tog" title="Walls can't be selected or moved while this is on"><input type="checkbox" id="tLock" ${UI.lockWalls?'checked':''}>Lock walls</label>`);};}
 $('#viewBar').addEventListener('change',e=>{if(e.target.id!=='tLock')return;UI.lockWalls=e.target.checked;try{saveUI();}catch(x){}if(UI.lockWalls){const s=selItem();if(isWall(s)||V.multi.length){V.sel=null;V.multi=[];}}changed(true,true);});
+
+/* ============================================================
+   Sun & Moon: a planning estimate drawn on the plot
+   ============================================================ */
+const ESRI_KEY='AAPTaG83ZstUrIK9LD5yuA3Zkxw..tklNOhpYXzbToG-FUbGCVwaVv_yZ3aWFXmekq79UvfiAeVaSRv213qyTHD6UwhKKS-eZ9ovTDc9W5iUL8mOkwLUbcCij8Ozeo-a-oJ1AaGV17Es_BaNbSoDZZk5mzrrbh8nnhDG02Ch2uLEVEFupFlh-i7-sW3qQHUVacT2irefClrBhmRsdHs-DthmUCDBxwevhrpTJrd_gUysxID_RgBlvmCJCJoF1qqApmRxucAXvKOaMi5M64mPe4kE.AT1_zXXLdBg9';
+const MAP_OK=/github\.io$|^localhost$|^127\./.test(location.hostname);
+const SKY=(()=>{const rad=Math.PI/180,J1970=2440588,J2000=2451545,e=rad*23.4397;const toDays=ms=>ms/864e5-.5+J1970-J2000;
+  const ra=(l,b)=>Math.atan2(Math.sin(l)*Math.cos(e)-Math.tan(b)*Math.sin(e),Math.cos(l)),dec=(l,b)=>Math.asin(Math.sin(b)*Math.cos(e)+Math.cos(b)*Math.sin(e)*Math.sin(l));
+  const az=(H,phi,d)=>Math.atan2(Math.sin(H),Math.cos(H)*Math.sin(phi)-Math.tan(d)*Math.cos(phi)),alt=(H,phi,d)=>Math.asin(Math.sin(phi)*Math.sin(d)+Math.cos(phi)*Math.cos(d)*Math.cos(H));
+  const sid=(d,lw)=>rad*(280.16+360.9856235*d)-lw;
+  const sunC=d=>{const M=rad*(357.5291+.98560028*d);const C=rad*(1.9148*Math.sin(M)+.02*Math.sin(2*M)+.0003*Math.sin(3*M));const L=M+C+rad*102.9372+Math.PI;return {dec:dec(L,0),ra:ra(L,0)};};
+  const moonC=d=>{const L=rad*(218.316+13.176396*d),M=rad*(134.963+13.064993*d),F=rad*(93.272+13.22935*d);const l=L+rad*6.289*Math.sin(M),b=rad*5.128*Math.sin(F);return {ra:ra(l,b),dec:dec(l,b),dist:385001-20905*Math.cos(M)};};
+  const pos=(c,ms,lat,lng)=>{const lw=rad*-lng,phi=rad*lat,d=toDays(ms);const H=sid(d,lw)-c(d).ra;return {az:((az(H,phi,c(d).dec)/rad+180)%360+360)%360,alt:alt(H,phi,c(d).dec)/rad};};
+  return {sun:(ms,lat,lng)=>pos(sunC,ms,lat,lng),moon:(ms,lat,lng)=>pos(moonC,ms,lat,lng),
+    phase:ms=>{const d=toDays(ms),s=sunC(d),m=moonC(d),sd=149598000;const phi=Math.acos(Math.sin(s.dec)*Math.sin(m.dec)+Math.cos(s.dec)*Math.cos(m.dec)*Math.cos(s.ra-m.ra));const inc=Math.atan2(sd*Math.sin(phi),m.dist-sd*Math.cos(phi));const ang=Math.atan2(Math.cos(s.dec)*Math.sin(s.ra-m.ra),Math.sin(s.dec)*Math.cos(m.dec)-Math.cos(s.dec)*Math.sin(m.dec)*Math.cos(s.ra-m.ra));return {lit:(1+Math.cos(inc))/2,phase:.5+.5*inc*(ang<0?-1:1)/Math.PI};}};})();
+function sunOf(sc){sc=sc||scene();if(!sc.sun){const d=new Date();sc.sun={on:false,lat:40.7128,lng:-74.006,place:'New York, NY',date:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,min:900,off:null,body:'sun',north:0};}return sc.sun;}
+function sunOff(s){if(s.off!=null&&s.off!=='')return +s.off;const [y,m,d]=s.date.split('-').map(Number);return -new Date(y,m-1,d,12).getTimezoneOffset()/60;}
+function sunMs(s,min){const [y,m,d]=s.date.split('-').map(Number);return Date.UTC(y,m-1,d)+(min==null?s.min:min)*6e4-sunOff(s)*36e5;}
+function skyPos(s,min){return SKY[s.body==='moon'?'moon':'sun'](sunMs(s,min),+s.lat,+s.lng);}
+function getNorth(){const a=setup().items.find(i=>i.t==='north');return a?(a.r||0):(sunOf().north||0);}
+function setNorth(v){v=((Math.round(v*10)/10)%360+360)%360;const s=sunOf();s.north=v;let a=setup().items.find(i=>i.t==='north');
+  if(!a){const ws=setup().items.filter(isWall);let x=0,y=0;if(ws.length){x=Math.min(...ws.flatMap(w=>w.pts.map(p=>p.x)))-3;y=Math.min(...ws.flatMap(w=>w.pts.map(p=>p.y)))-3;}a={id:rid(),t:'north',x:r2(x),y:r2(y),r:0,w:1.5,h:1.5,label:''};setup().items.push(a);}a.r=v;}
+const COMP=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];const compass=a=>COMP[Math.round(a/22.5)%16];
+const hhmm=m=>{if(m==null)return '—';m=((Math.round(m)%1440)+1440)%1440;const h=Math.floor(m/60),mm=m%60;return `${((h+11)%12)+1}:${String(mm).padStart(2,'0')} ${h<12?'AM':'PM'}`;};
+function skyTimes(s){const f=(body,th)=>{const p=min=>SKY[body](sunMs(s,min),+s.lat,+s.lng).alt;let rise=null,set=null,prev=p(0),best=-99,noon=null,g=[];for(let m=2;m<=1440;m+=2){const a=p(m);if(prev<th&&a>=th&&rise==null)rise=m-2+2*(th-prev)/(a-prev);if(prev>=th&&a<th&&set==null)set=m-2+2*(prev-th)/(prev-a);if(a>best){best=a;noon=m;}prev=a;}return {rise,set,noon,max:best};};
+  const sun=f('sun',-.833),moon=f('moon',.125);const g6=(()=>{const p=min=>SKY.sun(sunMs(s,min),+s.lat,+s.lng).alt;let am=null,pm=null,prev=p(0);for(let m=2;m<=1440;m+=2){const a=p(m);if(prev<6&&a>=6&&am==null)am=m;if(prev>=6&&a<6)pm=m;prev=a;}return {am,pm};})();return {sun,moon,g6};}
+function phaseName(p){return ['New moon','Waxing crescent','First quarter','Waxing gibbous','Full moon','Waning gibbous','Last quarter','Waning crescent'][Math.round(p*8)%8];}
+/* drawing */
+function sunSVG(items,o){const sc=scene(),s=sc.sun;if(!s||!s.on)return '';const C=o.C,px=o.px;const p=skyPos(s);const N=getNorth();const th=(N+p.az)*D2R;const sx=Math.sin(th),sy=-Math.cos(th);const Lx=-sx,Ly=-sy;const moon=s.body==='moon';const col=moon?'#a9c4ff':'#ffc94d';
+  const walls=items.filter(isWall);const pts=walls.flatMap(w=>w.pts);const all=pts.length?pts:items.filter(i=>i.x!=null).map(i=>({x:i.x,y:i.y}));if(!all.length)return '';
+  const x0=Math.min(...all.map(q=>q.x)),x1=Math.max(...all.map(q=>q.x)),y0=Math.min(...all.map(q=>q.y)),y1=Math.max(...all.map(q=>q.y));let out='';const up=p.alt>0;
+  if(up){const tan=Math.tan(Math.max(p.alt,2)*D2R);const segs=walls.map(w=>[w.pts[0],w.pts[1]]);
+    const hit=(a,b,c,d)=>{const r={x:b.x-a.x,y:b.y-a.y},q={x:d.x-c.x,y:d.y-c.y};const den=r.x*q.y-r.y*q.x;if(Math.abs(den)<1e-9)return false;const t=((c.x-a.x)*q.y-(c.y-a.y)*q.x)/den,u=((c.x-a.x)*r.y-(c.y-a.y)*r.x)/den;return t>.01&&t<1&&u>=0&&u<=1;};
+    if(/^EXT/i.test(sc.ie||'')){const d=Math.min(9/tan,30);walls.forEach(w=>{const a=w.pts[0],b=w.pts[1];out+=`<path d="M${a.x} ${a.y} L${b.x} ${b.y} L${b.x+Lx*d} ${b.y+Ly*d} L${a.x+Lx*d} ${a.y+Ly*d}Z" fill="#000" opacity="${moon?.1:.16}"/>`;});
+      items.filter(i=>i.t==='actor').forEach(a=>{const d=Math.min(5.6/tan,24);const nx=-Ly*.7,ny=Lx*.7;out+=`<path d="M${a.x+nx} ${a.y+ny} L${a.x-nx} ${a.y-ny} L${a.x+Lx*d-nx*.5} ${a.y+Ly*d-ny*.5} L${a.x+Lx*d+nx*.5} ${a.y+Ly*d+ny*.5}Z" fill="#000" opacity="${moon?.14:.24}"/>`;});}
+    items.filter(i=>i.t==='window'||(i.t==='door'&&/^EXT|^INT/i.test(sc.ie||'')&&false)).forEach(wn=>{const a=(wn.r||0)*D2R,ux=Math.cos(a),uy=Math.sin(a),hw=(wn.w||4)/2;if(Math.abs(ux*Ly-uy*Lx)<.08)return;const c={x:wn.x,y:wn.y};const far={x:c.x+sx*200,y:c.y+sy*200};
+      if(segs.some(g=>{const onOwn=Math.abs((c.x-g[0].x)*(g[1].y-g[0].y)-(c.y-g[0].y)*(g[1].x-g[0].x))/(Math.hypot(g[1].x-g[0].x,g[1].y-g[0].y)||1)<.35;return !onOwn&&hit(c,far,g[0],g[1]);}))return;
+      const d1=3/tan,d2=Math.min(7/tan,45);if(d1>40)return;const p1={x:c.x-ux*hw,y:c.y-uy*hw},p2={x:c.x+ux*hw,y:c.y+uy*hw};
+      out+=`<path d="M${p1.x+Lx*d1} ${p1.y+Ly*d1} L${p2.x+Lx*d1} ${p2.y+Ly*d1} L${p2.x+Lx*d2} ${p2.y+Ly*d2} L${p1.x+Lx*d2} ${p1.y+Ly*d2}Z" fill="${col}" opacity="${moon?.22:.3}"/><path d="M${p1.x} ${p1.y} L${p1.x+Lx*d2} ${p1.y+Ly*d2} M${p2.x} ${p2.y} L${p2.x+Lx*d2} ${p2.y+Ly*d2}" stroke="${col}" stroke-width="${1*px}" stroke-dasharray="${4*px} ${4*px}" opacity=".55" fill="none"/>`;});}
+  /* compass dial with the sun or moon on its rim */
+  const R=2.2,cx=x1+R+2.5,cy=y0+R;const nx=Math.sin(N*D2R),ny=-Math.cos(N*D2R);const t=hhmm(s.min);const ty=cy+R+(ny>.35?2.6:1.5);
+  out+=`<g pointer-events="none"><circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${C.sub}" stroke-width="${1*px}" opacity=".7"/><path d="M${cx+nx*R} ${cy+ny*R} L${cx+nx*(R+.6)} ${cy+ny*(R+.6)}" stroke="${C.text}" stroke-width="${2*px}"/><text x="${cx+nx*(R+1.1)}" y="${cy+ny*(R+1.1)+.22}" text-anchor="middle" font-family="${C.font}" font-weight="700" font-size=".62" fill="${C.text}">N</text>`;
+  if(up)out+=`<path d="M${cx+sx*R} ${cy+sy*R} L${cx-sx*R*.75} ${cy-sy*R*.75}" stroke="${col}" stroke-width="${2*px}"/><path d="M${cx-sx*R*.75} ${cy-sy*R*.75} l${(sx*.5-sy*.28)} ${(sy*.5+sx*.28)} M${cx-sx*R*.75} ${cy-sy*R*.75} l${(sx*.5+sy*.28)} ${(sy*.5-sx*.28)}" stroke="${col}" stroke-width="${2*px}" fill="none"/><circle cx="${cx+sx*R}" cy="${cy+sy*R}" r=".42" fill="${col}"/>`;
+  out+=`<text x="${cx}" y="${ty}" text-anchor="middle" font-family="${C.font}" font-weight="700" font-size=".6" fill="${C.text}">${moon?'Moon':'Sun'} · ${t}</text><text x="${cx}" y="${ty+.85}" text-anchor="middle" font-family="${C.font}" font-size=".52" fill="${C.sub}">${up?`${Math.round(p.az)}° ${compass(p.az)} · ${Math.round(p.alt)}° high`:'below the horizon'}</text><text x="${cx}" y="${ty+1.6}" text-anchor="middle" font-family="${C.font}" font-size=".44" fill="${C.sub}">planning estimate</text></g>`;
+  return `<g pointer-events="none">${out}</g>`;}
+{const _ri=renderItems;renderItems=function(items,o){const L=_ri(items,o);if(o&&!o.ghost&&(o.dimSel||o.tag==='sheet')){try{L.floor=(L.floor||'')+sunSVG(items,o);}catch(e){}}return L;};}
+/* panel */
+const CITIES=[['New York, NY',40.7128,-74.006],['Los Angeles, CA',34.0522,-118.2437],['Atlanta, GA',33.749,-84.388],['Chicago, IL',41.8781,-87.6298],['New Orleans, LA',29.9511,-90.0715],['Austin, TX',30.2672,-97.7431],['Albuquerque, NM',35.0844,-106.6504],['Vancouver, BC',49.2827,-123.1207],['Toronto, ON',43.6532,-79.3832],['London, UK',51.5074,-.1278],['Paris, France',48.8566,2.3522],['Mumbai, India',19.076,72.8777]];
+function sunReadout(){const s=sunOf();const p=skyPos(s),T=skyTimes(s),moon=s.body==='moon';const row=(a,b)=>`<div class="kv"><span>${a}</span><b>${b}</b></div>`;
+  let h=row(moon?'Moon is':'Sun is',p.alt>0?`${Math.round(p.az)}° ${compass(p.az)}, ${Math.round(p.alt)}° above the horizon`:'below the horizon');
+  if(p.alt>0)h+=row('A 6 ft person casts',p.alt>2?`a ${fmtFt(6/Math.tan(p.alt*D2R))} shadow`:'a very long shadow');
+  if(moon){const ph=SKY.phase(sunMs(s));h+=row('Phase',`${phaseName(ph.phase)}, ${Math.round(ph.lit*100)}% lit`)+row('Moonrise',hhmm(T.moon.rise))+row('Moonset',hhmm(T.moon.set));}
+  else h+=row('Sunrise',hhmm(T.sun.rise))+row('Solar noon',`${hhmm(T.sun.noon)} · ${Math.round(T.sun.max)}° high`)+row('Sunset',hhmm(T.sun.set))+row('Golden hour',T.sun.rise==null?'—':`until ${hhmm(T.g6.am)} · from ${hhmm(T.g6.pm)}`);
+  return h;}
+function panelSun(){const s=sunOf();const sel=selItem();const wsel=sel&&(isWall(sel)&&sel.pts.length===2||sel.t==='window'||sel.t==='door');
+  return `<div class="pTitle">Sun &amp; Moon</div><div class="note" style="margin:6px 0 10px"><b>Planning estimate only.</b> It shows where the sun or moon is in the sky, not what is in the way: buildings, trees, weather and curtains are not accounted for. Confirm on location.</div>
+  <label class="chk" style="margin-bottom:8px"><input type="checkbox" data-sun="on" ${s.on?'checked':''}> Show on this scene’s plot</label>
+  <div class="seg" style="margin-bottom:10px"><button data-sunbody="sun" class="${s.body!=='moon'?'on':''}">Sun</button><button data-sunbody="moon" class="${s.body==='moon'?'on':''}">Moon</button></div>
+  <div class="grp"><h4>Where</h4>
+  ${MAP_OK?`<div style="display:flex;gap:6px;margin-bottom:6px"><input class="in" id="sunQ" placeholder="Search an address or place" style="flex:1;min-width:0"><button class="btn sm" id="sunGo">Search</button></div><div id="sunRes"></div><div id="sunMapSlot"></div><div class="seg" style="margin:6px 0"><button data-sunlayer="street" class="${sunLayer!=='sat'?'on':''}">Street</button><button data-sunlayer="sat" class="${sunLayer==='sat'?'on':''}">Satellite</button></div><div class="pSub">Click the map to move the pin.</div>`:`<div class="pSub" style="margin-bottom:6px">Address search and the map work on the Clementine Films website version. Here, pick a city or type coordinates.</div>`}
+  ${fld('City',`<select class="in" data-sun="city"><option value="">${esc(s.place||'Custom location')}</option>${CITIES.map((c,i)=>`<option value="${i}">${c[0]}</option>`).join('')}</select>`)}
+  <div class="f2">${fld('Latitude',`<input class="in" data-sun="lat" value="${(+s.lat).toFixed(5)}">`)}${fld('Longitude',`<input class="in" data-sun="lng" value="${(+s.lng).toFixed(5)}">`)}</div></div>
+  <div class="grp"><h4>When</h4>
+  <div class="f2">${fld('Date',`<input class="in" type="date" data-sun="date" value="${esc(s.date)}">`)}${fld('Hours from UTC',`<input class="in" data-sun="off" value="${sunOff(s)}" title="Local time at the location, in hours from UTC. New York is -5 in winter, -4 in summer.">`)}</div>
+  <div class="f"><label>Time of day <b id="sunT" style="float:right">${hhmm(s.min)}</b></label><input type="range" data-sun="min" min="0" max="1435" step="5" value="${s.min}" style="width:100%"></div>
+  <div id="sunOut">${sunReadout()}</div></div>
+  <div class="grp"><h4>Which way the plot faces</h4>
+  ${fld('North on the plot, in degrees clockwise from the top',`<input class="in" data-sun="north" value="${Math.round(getNorth()*10)/10}">`)}
+  <div class="pSub" style="margin:2px 0 6px">Or select a wall or window on the plot, then tell it what you see looking out through it from inside:</div>
+  <div style="display:flex;gap:6px"><input class="in" id="sunBear" placeholder="${wsel?'Compass reading, e.g. 210':'Select a wall first'}" ${wsel?'':'disabled'} style="flex:1;min-width:0"><button class="btn sm" id="sunBearGo" ${wsel?'':'disabled'}>Set</button></div>
+  ${MAP_OK?`<button class="btn sm" id="sunPick" style="margin-top:6px" ${wsel?'':'disabled'}>Set from the map instead</button><div class="pSub" id="sunPickHint" style="margin-top:4px">${sunPick?sunPickText():''}</div>`:''}</div>`;}
+let sunLayer='street',sunPick=null,sunMap=null,sunMapEl=null,sunPin=null,sunLayers={};
+function sunPickText(){return ['Click one end of that wall on the map.','Now click the other end of the wall.','Now click once outside the building, on the side that wall faces.'][sunPick?sunPick.length:0]||'';}
+function outwardOf(it){let a,b;if(isWall(it)){a=it.pts[0];b=it.pts[1];}else{const r=(it.r||0)*D2R;a={x:it.x-Math.cos(r),y:it.y-Math.sin(r)};b={x:it.x+Math.cos(r),y:it.y+Math.sin(r)};}
+  const L=Math.hypot(b.x-a.x,b.y-a.y)||1;let nx=-(b.y-a.y)/L,ny=(b.x-a.x)/L;const ws=setup().items.filter(isWall).flatMap(w=>w.pts);if(ws.length){const cx=ws.reduce((t,p)=>t+p.x,0)/ws.length,cy=ws.reduce((t,p)=>t+p.y,0)/ws.length;const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;if((mx-cx)*nx+(my-cy)*ny<0){nx=-nx;ny=-ny;}}return {nx,ny};}
+function northFromBearing(it,B){const o=outwardOf(it);setNorth(Math.atan2(o.nx,-o.ny)/D2R-B);}
+async function sunMapInit(){if(!MAP_OK)return;const slot=$('#sunMapSlot');if(!slot)return;const s=sunOf();
+  if(!window.L){if(!document.getElementById('lfCss')){const l=document.createElement('link');l.id='lfCss';l.rel='stylesheet';l.href='leaflet.css';document.head.appendChild(l);}await new Promise(res=>{const sc=document.createElement('script');sc.src='leaflet.js';sc.onload=res;sc.onerror=res;document.head.appendChild(sc);});}
+  if(!window.L){slot.innerHTML='<div class="pSub">The map could not load.</div>';return;}
+  if(!sunMapEl){sunMapEl=document.createElement('div');sunMapEl.style.cssText='height:210px;border-radius:8px;overflow:hidden;border:1px solid var(--line2)';slot.appendChild(sunMapEl);
+    sunMap=L.map(sunMapEl,{zoomControl:true,attributionControl:true}).setView([+s.lat,+s.lng],17);
+    sunLayers.street=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'});
+    sunLayers.sat=L.tileLayer('https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token='+ESRI_KEY,{maxZoom:19,attribution:'Powered by Esri · Esri, Maxar, Earthstar Geographics, and the GIS User Community'});
+    let warned=false;sunLayers.sat.on('tileerror',()=>{if(warned)return;warned=true;toast('Satellite view did not load. Showing the street map.');sunLayer='street';sunMap.removeLayer(sunLayers.sat);sunLayers.street.addTo(sunMap);renderPanel();});
+    sunLayers[sunLayer].addTo(sunMap);sunPin=L.circleMarker([+s.lat,+s.lng],{radius:7,color:'#bd5103',fillColor:'#bd5103',fillOpacity:.9}).addTo(sunMap);
+    sunMap.on('click',ev=>{const ll=ev.latlng;if(sunPick){sunPick.push(ll);if(sunPick.length<3){const h=$('#sunPickHint');if(h)h.textContent=sunPickText();return;}
+        const [a,b,c]=sunPick;sunPick=null;const brg=(p,q)=>{const f1=p.lat*D2R,f2=q.lat*D2R,dl=(q.lng-p.lng)*D2R;return (Math.atan2(Math.sin(dl)*Math.cos(f2),Math.cos(f1)*Math.sin(f2)-Math.sin(f1)*Math.cos(f2)*Math.cos(dl))/D2R+360)%360;};
+        const wb=brg(a,b),mid={lat:(a.lat+b.lat)/2,lng:(a.lng+b.lng)/2},ob=brg(mid,c);const d1=Math.abs(((wb+90-ob+540)%360)-180),d2=Math.abs(((wb-90-ob+540)%360)-180);const B=(d1<d2?wb+90:wb-90+360)%360;const it=selItem();if(it){snap();northFromBearing(it,B);changed();toast(`That wall faces ${Math.round(B)}° ${compass(B)}. North is set.`);}return;}
+      const sn=sunOf();sn.lat=ll.lat;sn.lng=ll.lng;sn.place='';sunPin.setLatLng(ll);sunRefresh(true);});
+  }else{slot.appendChild(sunMapEl);}
+  setTimeout(()=>{try{sunMap.invalidateSize();}catch(e){}},30);}
+function sunRefresh(full){renderCanvas();scheduleSave();if(full)renderPanel();else{const o=$('#sunOut');if(o)o.innerHTML=sunReadout();const t=$('#sunT');if(t)t.textContent=hhmm(sunOf().min);}}
+{const _rp=renderPanel;renderPanel=function(){_rp();if(V.rightTab==='sun'&&UI.R){$('#panel').innerHTML=panelSun();sunMapInit();}};}
+$('#panel').addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.sun;if(k!=='min')return;e.stopPropagation();sunOf().min=+e.target.value;sunRefresh(false);},true);
+$('#panel').addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.sun;if(!k)return;e.stopPropagation();const s=sunOf();const v=e.target.value;
+  if(k==='on'){s.on=e.target.checked;sunRefresh(false);return;}if(k==='min'){return;}
+  if(k==='city'){if(v==='')return;const c=CITIES[+v];s.place=c[0];s.lat=c[1];s.lng=c[2];if(sunMap){sunMap.setView([c[1],c[2]],13);sunPin.setLatLng([c[1],c[2]]);}sunRefresh(true);return;}
+  if(k==='lat'||k==='lng'){const n=parseFloat(v);if(!isFinite(n)||Math.abs(n)>(k==='lat'?90:180)){renderPanel();return;}s[k]=n;s.place='';if(sunMap){sunMap.setView([+s.lat,+s.lng]);sunPin.setLatLng([+s.lat,+s.lng]);}sunRefresh(true);return;}
+  if(k==='date'){if(/^\d{4}-\d{2}-\d{2}$/.test(v)){s.date=v;sunRefresh(true);}return;}
+  if(k==='off'){const n=parseFloat(v);s.off=isFinite(n)&&Math.abs(n)<=14?n:null;sunRefresh(true);return;}
+  if(k==='north'){const n=parseFloat(v);if(isFinite(n)){snap();setNorth(n);changed();}return;}},true);
+$('#panel').addEventListener('click',async e=>{const t=e.target;if(t.dataset&&t.dataset.sunbody){sunOf().body=t.dataset.sunbody;sunRefresh(true);return;}
+  if(t.dataset&&t.dataset.sunlayer&&sunMap){const k=t.dataset.sunlayer;if(k!==sunLayer){sunMap.removeLayer(sunLayers[sunLayer]);sunLayer=k;sunLayers[k].addTo(sunMap);renderPanel();}return;}
+  if(t.id==='sunBearGo'){const B=parseFloat($('#sunBear').value);const it=selItem();if(!isFinite(B)||!it){toast('Type the compass reading as a number, 0 to 360');return;}snap();northFromBearing(it,B);changed();toast('North is set from that wall.');return;}
+  if(t.id==='sunPick'){sunPick=[];const h=$('#sunPickHint');if(h)h.textContent=sunPickText();return;}
+  if(t.id==='sunGo'){const q=$('#sunQ').value.trim();if(!q)return;const r=$('#sunRes');r.innerHTML='<div class="pSub">Searching…</div>';try{const res=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q='+encodeURIComponent(q));const js=await res.json();
+      r.innerHTML=js.length?js.map((o,i)=>`<button class="btn sm" data-sunhit="${i}" style="display:block;width:100%;text-align:left;margin-bottom:4px;white-space:normal;height:auto;padding:6px 8px">${esc(o.display_name)}</button>`).join(''):'<div class="pSub">Nothing found. Try adding the city.</div>';r._hits=js;}catch(x){r.innerHTML='<div class="pSub">The search did not respond. Type coordinates or pick a city instead.</div>';}return;}
+  if(t.dataset&&t.dataset.sunhit!=null){const o=($('#sunRes')._hits||[])[+t.dataset.sunhit];if(!o)return;const s=sunOf();s.lat=+o.lat;s.lng=+o.lon;s.place=o.display_name.split(',').slice(0,2).join(',');if(sunMap){sunMap.setView([s.lat,s.lng],18);sunPin.setLatLng([s.lat,s.lng]);}sunRefresh(true);return;}});
+$('#sunQ')||document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='sunQ'){e.preventDefault();const b=$('#sunGo');if(b)b.click();}});
 const BRANDFF=(()=>{let o='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.type===5&&/EB Garamond|Lato/.test(r.cssText))o+=r.cssText;}catch(e){}}return o;})();
 /* ============================================================
    Export
