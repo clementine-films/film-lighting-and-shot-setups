@@ -823,7 +823,7 @@ function arrowHead(p1,p2,size,color){const a=Math.atan2(p2.y-p1.y,p2.x-p1.x);con
   return `<path d="M${x} ${y} L${x-l*Math.cos(a)+wd*Math.sin(a)} ${y-l*Math.sin(a)-wd*Math.cos(a)} L${x-l*Math.cos(a)-wd*Math.sin(a)} ${y-l*Math.sin(a)+wd*Math.cos(a)}Z" fill="${color}"/>`;}
 function drawLine(it,L1,o,sel){
   const C=o.C,px=o.px,p=it.pts;if(!p||p.length<1)return;
-  const d='M'+p.map(q=>q.x+' '+q.y).join(' L');const ida=o.ghost?'':`data-id="${it.id}"`;
+  const d='M'+p.map(q=>q.x+' '+q.y).join(' L');const ida=o.ghost||(it.kind==='wall'&&UI.lockWalls)?'':`data-id="${it.id}"`;
   const hit=o.ghost?'':`<path ${ida} d="${d}" fill="none" stroke="transparent" stroke-width="${14*px}" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:stroke"/>`;
   const selG=sel?`<path d="${d}" fill="none" stroke="#f2a93b" stroke-opacity=".45" stroke-width="${8*px}" stroke-linecap="round" stroke-linejoin="round"/>`:'';
   const fs=11*px;const len=lineLen(p);const mid=midPoint(p);const op=o.ghost?'opacity=".3"':'';
@@ -1758,6 +1758,61 @@ function moveShotTo(id){const sc=scene(),su=setup(),sh=shot();let to=id==='__new
   try{linkOrphans(P);}catch(e){}
   V.setupId=to.id;V.shotId=sh.id;V.sel=null;fixView();changed();toast(`Shot ${sh.num} moved to ${to.name}`);}
 document.getElementById('panel').addEventListener('change',e=>{if(e.target.dataset&&e.target.dataset.mvsu){e.stopPropagation();moveShotTo(e.target.value);}},true);
+
+/* ============================================================
+   Walls: every side is its own piece
+   ============================================================ */
+const isWall=i=>i&&i.t==='line'&&i.kind==='wall';const wNear=(p,q)=>Math.hypot(p.x-q.x,p.y-q.y)<.02;
+function explodeWalls(arr){const map={};for(let i=arr.length-1;i>=0;i--){const it=arr[i];if(!isWall(it)||it.pts.length<=2)continue;const segs=[];
+    for(let k=1;k<it.pts.length;k++){const a=it.pts[k-1],b=it.pts[k];if(Math.hypot(b.x-a.x,b.y-a.y)<.02)continue;const s=clone(it);s.id=rid();s.pts=[{x:a.x,y:a.y},{x:b.x,y:b.y}];segs.push(s);}
+    arr.splice(i,1,...segs);map[it.id]=segs.map(s=>s.id);}return map;}
+function explodeAll(p){if(!p||!p.scenes)return p;p.scenes.forEach(sc=>sc.setups.forEach(su=>{explodeWalls(su.items);su.shots.forEach(sh=>explodeWalls(sh.items));}));return p;}
+{const _lo=linkOrphans;linkOrphans=function(p){explodeAll(p);return _lo(p);};}
+function wallArr(it){const f=findItem(it.id);return f?f.arr:null;}
+function splitWallAt(it,pt){const arr=wallArr(it);if(!arr||it.pts.length!==2)return null;const a=it.pts[0],b=it.pts[1];const p={x:r2(pt.x),y:r2(pt.y)};if(Math.hypot(p.x-a.x,p.y-a.y)<.05||Math.hypot(p.x-b.x,p.y-b.y)<.05)return null;
+  const n=clone(it);n.id=rid();n.pts=[{x:p.x,y:p.y},{x:b.x,y:b.y}];it.pts=[{x:a.x,y:a.y},{x:p.x,y:p.y}];arr.splice(arr.indexOf(it)+1,0,n);return n;}
+function wallAtPoint(pt,except){return activeItems().find(w=>{if(!isWall(w)||w.pts.length!==2||(except&&except.includes(w.id)))return false;const a=w.pts[0],b=w.pts[1];const L=Math.hypot(b.x-a.x,b.y-a.y);if(L<.1)return false;const ux=(b.x-a.x)/L,uy=(b.y-a.y)/L;const cx=pt.x-a.x,cy=pt.y-a.y;const t=cx*ux+cy*uy;return Math.abs(cx*uy-cy*ux)<.03&&t>.05&&t<L-.05;});}
+function selectWalls(ids){ids=ids.filter(id=>findItem(id));if(!ids.length){V.sel=null;V.multi=[];return;}V.sel=ids[0];V.multi=ids.length>1?ids.slice():[];}
+/* a new wall that starts or ends partway along another wall joins it there */
+{const _fd=finishDraft;finishDraft=function(){const d=V.draft;const wasWall=d&&d.kind==='wall'&&d.pts.length>=2;_fd();if(!wasWall)return;const it=selItem();if(!isWall(it))return;
+    const ends=[it.pts[0],it.pts[it.pts.length-1]];const arr=wallArr(it);const map=explodeWalls(arr);const ids=map[it.id]||[it.id];
+    ends.forEach(p=>{const h=wallAtPoint(p,ids);if(h)splitWallAt(h,p);});selectWalls(ids);changed();};}
+{const _mr=makeRoom;makeRoom=function(x,y,w,h){_mr(x,y,w,h);const it=selItem();if(!isWall(it))return;const map=explodeWalls(wallArr(it));selectWalls(map[it.id]||[it.id]);changed();toast(`Room ${fmtFt(w)} × ${fmtFt(h)} — tap one side to change or delete just that side`);};}
+function connectedWalls(id){const walls=activeItems().filter(isWall);const start=walls.find(w=>w.id===id);if(!start)return [];const seen=new Set([start.id]);const q=[start];
+  while(q.length){const w=q.pop();walls.forEach(o=>{if(seen.has(o.id))return;if(o.pts.some(p=>w.pts.some(r=>wNear(p,r)))){seen.add(o.id);q.push(o);}});}return [...seen];}
+function selRect(ws){if(ws.length!==4||!ws.every(w=>w.pts.length===2))return null;const xs=[],ys=[];for(const w of ws){const a=w.pts[0],b=w.pts[1];if(Math.abs(a.x-b.x)>.011&&Math.abs(a.y-b.y)>.011)return null;xs.push(a.x,b.x);ys.push(a.y,b.y);}
+  const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);if(x1-x0<.05||y1-y0<.05)return null;
+  if(!ws.every(w=>w.pts.every(p=>(Math.abs(p.x-x0)<.02||Math.abs(p.x-x1)<.02)&&(Math.abs(p.y-y0)<.02||Math.abs(p.y-y1)<.02))))return null;return {x0,y0,x1,y1,w:r2(x1-x0),h:r2(y1-y0)};}
+function setSelRoom(ws,w,h){const rc=selRect(ws);if(!rc||!(w>.2)||!(h>.2))return;const caps=capOpenings(ws);ws.forEach(wl=>wl.pts.forEach(p=>{p.x=r2(Math.abs(p.x-rc.x0)<.02?rc.x0:rc.x0+w);p.y=r2(Math.abs(p.y-rc.y0)<.02?rc.y0:rc.y0+h);}));reseatOpenings(caps);}
+/* typing a wall's length carries the joined walls along, so a room stays closed and square */
+{const _ssl=setSegLen;setSegLen=function(it,i,len){if(!isWall(it)||it.pts.length!==2)return _ssl(it,i,len);if(!(len>.05))return;const a=it.pts[0],b=it.pts[1];const L=Math.hypot(b.x-a.x,b.y-a.y);if(L<1e-6)return;
+    const ux=(b.x-a.x)/L,uy=(b.y-a.y)/L,d={x:ux*(len-L),y:uy*(len-L)};const walls=activeItems().filter(w=>isWall(w)&&w.pts.length===2);const caps=capOpenings(walls);
+    const orig=new Map(walls.map(w=>[w.id,w.pts.map(p=>({x:p.x,y:p.y}))]));const moved=new Set();const mv=(w,j)=>{const k=w.id+':'+j;if(moved.has(k))return;moved.add(k);w.pts[j].x=r2(w.pts[j].x+d.x);w.pts[j].y=r2(w.pts[j].y+d.y);};
+    const B0={x:b.x,y:b.y};const far=[];mv(it,1);
+    walls.forEach(w=>{if(w===it)return;const o=orig.get(w.id);[0,1].forEach(j=>{if(!wNear(o[j],B0))return;const e=o[1-j];const wl=Math.hypot(e.x-o[j].x,e.y-o[j].y)||1;const cross=Math.abs((e.x-o[j].x)*uy-(e.y-o[j].y)*ux)/wl;mv(w,j);if(cross>.02){mv(w,1-j);far.push({x:e.x,y:e.y});}});});
+    far.forEach(E=>walls.forEach(w=>{const o=orig.get(w.id);[0,1].forEach(j=>{if(wNear(o[j],E))mv(w,j);});}));reseatOpenings(caps);};}
+/* quick bar: wall actions */
+{const _rq=renderQuick;renderQuick=function(){_rq();const q=$('#quick');if(!q||!q.innerHTML||fromQuick)return;const ids=selIds();const its=ids.map(id=>(findItem(id)||{}).it);if(!its.length||!its.every(isWall))return;
+    if(its.length===1){const sep=q.querySelector('.qsep');if(sep&&its[0].pts.length===2)sep.insertAdjacentHTML('beforebegin',`<button class="btn sm" data-wact="corner" title="Add a corner in the middle of this wall, then drag it">Add corner</button><button class="btn sm" data-wact="gap" title="Remove part of this wall: tap where the gap starts, then where it ends">Cut gap</button><button class="btn sm" data-wact="room" title="Select every wall joined to this one">Whole room</button>`);return;}
+    const rc=selRect(its);const b=q.querySelector('b');if(b)b.textContent=rc?'Room':`${its.length} walls`;const m=q.querySelector('.qm');
+    if(rc&&m){const ft=(lab,k,val)=>`<label class="qf">${lab}<input class="in" data-wroom="${k}" value="${esc(fmtFtIn(val))}"></label>`;m.outerHTML=ft('W','w',rc.w)+ft('D','h',rc.h);}else if(m)m.textContent='tap one wall to edit just that side';};}
+$('#quick').addEventListener('click',e=>{const b=e.target.closest('[data-wact]');if(!b)return;const it=selItem();if(!isWall(it))return;const a=b.dataset.wact;
+  if(a==='room'){selectWalls(connectedWalls(it.id));changed();return;}
+  if(a==='corner'){snap();const p=it.pts;const n=splitWallAt(it,{x:(p[0].x+p[1].x)/2,y:(p[0].y+p[1].y)/2});if(n){changed();toast('Corner added. Drag its white handle to bend the wall.');}return;}
+  if(a==='gap'){V.cut={a0:{x:it.pts[0].x,y:it.pts[0].y},b0:{x:it.pts[1].x,y:it.pts[1].y},a:null};setCutHint();}});
+$('#quick').addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.wroom;if(!k)return;const ws=selIds().map(id=>(findItem(id)||{}).it).filter(isWall);const rc=selRect(ws);const v=parseFt(e.target.value);if(!rc||!(v>.2)){renderQuick();return;}snap();setSelRoom(ws,k==='w'?v:rc.w,k==='h'?v:rc.h);changed();});
+function setCutHint(){const h=$('#hint');if(h&&V.cut)h.innerHTML=V.cut.a?'<b style="color:#ffcf7a">Cut gap</b> — now tap where the gap ends · Esc to cancel':'<b style="color:#ffcf7a">Cut gap</b> — tap the wall where the gap starts · Esc to cancel';}
+function cutPoint(w){const c=V.cut;const L=Math.hypot(c.b0.x-c.a0.x,c.b0.y-c.a0.y)||1;const ux=(c.b0.x-c.a0.x)/L,uy=(c.b0.y-c.a0.y)/L;let t=(w.x-c.a0.x)*ux+(w.y-c.a0.y)*uy;if(V.snap)t=Math.round(t*4)/4;t=Math.max(0,Math.min(L,t));return {x:r2(c.a0.x+ux*t),y:r2(c.a0.y+uy*t),t};}
+cv.addEventListener('pointerdown',e=>{if(!V.cut||e.button)return;e.stopImmediatePropagation();e.preventDefault();const c=V.cut;const p=cutPoint(toWorld(e));
+  if(!c.a){snap();c.a=p;const h=wallAtPoint(p);if(h)splitWallAt(h,p);changed();setCutHint();return;}
+  if(Math.abs(p.t-c.a.t)<.2){toast('Tap a little further along the wall');return;}
+  const h=wallAtPoint(p);if(h)splitWallAt(h,p);const mid=activeItems().find(w=>isWall(w)&&w.pts.length===2&&((wNear(w.pts[0],c.a)&&wNear(w.pts[1],p))||(wNear(w.pts[1],c.a)&&wNear(w.pts[0],p))));
+  V.cut=null;if(mid){const f=findItem(mid.id);f.arr.splice(f.arr.indexOf(mid),1);V.sel=null;V.multi=[];toast(`${fmtFt(Math.abs(p.t-c.a.t))} gap cut`);}else toast('Could not cut there. Undo and try again on one straight wall.');changed();updHint();},true);
+window.addEventListener('keydown',e=>{if(V.cut&&e.key==='Escape'){V.cut=null;updHint();e.stopPropagation();}},true);
+cv.addEventListener('dblclick',e=>{if(V.draft)return;const g=e.target.closest('[data-id]');const f=g&&findItem(g.dataset.id);if(f&&isWall(f.it)){e.stopImmediatePropagation();selectWalls(connectedWalls(f.it.id));changed();}},true);
+/* lock walls so placing gear can't nudge them */
+{const _rt=renderTools;renderTools=function(){_rt();const vb=$('#viewBar');if(vb&&!vb.querySelector('#tLock'))vb.querySelector('#tGhost').closest('label').insertAdjacentHTML('afterend',`<label class="tog" title="Walls can't be selected or moved while this is on"><input type="checkbox" id="tLock" ${UI.lockWalls?'checked':''}>Lock walls</label>`);};}
+$('#viewBar').addEventListener('change',e=>{if(e.target.id!=='tLock')return;UI.lockWalls=e.target.checked;try{saveUI();}catch(x){}if(UI.lockWalls){const s=selItem();if(isWall(s)||V.multi.length){V.sel=null;V.multi=[];}}changed(true,true);});
 const BRANDFF=(()=>{let o='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.type===5&&/EB Garamond|Lato/.test(r.cssText))o+=r.cssText;}catch(e){}}return o;})();
 /* ============================================================
    Export
@@ -1796,6 +1851,7 @@ function buildSheet(sc,su,sh,X){
      +txt(Wd-30,38,`Shot ${sh.num}`,{size:30,gar:1,c:'#fff',anchor:'end'})+txt(Wd-30,64,`${su.name} · ${new Date().toLocaleDateString()}`,{size:13,c:'#aab1bb',anchor:'end'});
   let frame=`<rect x="${DX}" y="${DY}" width="${DW}" height="${DH}" fill="none" stroke="${T.rule}"/>`;
   frame+=txt(DX+8,DY+DH+22,[X.grid?'Grid: 1 square = 1 ft · bold lines every 5 ft':'',X.ghost&&su.shots.length>1?`faded cameras = other shots in ${su.name}`:'',!X.header?`${P.title} · Sc ${sc.num} · Shot ${sh.num}`:''].filter(Boolean).join(' · '),{size:11,c:T.sub});
+  frame+=txt(DX+8,DY+DH+38,'Planning reference for placement only. Not an exact representation of the lighting or framing on set.',{size:11,c:T.sub});
   if(side){
     const room=n=>y+n<=YMAX;
     const sec=(title)=>{if(!room(60))return false;t+=`<rect x="${RX}" y="${y}" width="${RW}" height="24" fill="${T.band}"/>`+txt(RX+10,y+17,title,{size:15,gar:1,c:T.ink});y+=42;return true;};
