@@ -446,7 +446,18 @@ setDef('fridge','Fridge / Appliance',3,2.5,'box');
 setDef('rug','Rug',8,5,'rug');
 setDef('car','Car',6.2,15,'car','Vehicles');
 setDef('plant','Plant / Tree',2,2,'plant','Dressing');
-setDef('box','Generic Object',2,2,'box','Dressing');
+setDef('box','Custom Object (name and size it)',3,3,'box','Dressing');
+const setL=(key,name,w,h,group,shape,label)=>def(key,{cat:'Set',group,name,kind:'set',shape:shape||'box',defaults:{w,h,label:label===undefined?name.replace(/ \(.*\)/,''):label}});
+setL('armchair','Armchair',3,3,'Living room','chair','');setL('coffeetable','Coffee Table',4,2,'Living room');setL('sidetable','Side Table',1.6,1.6,'Living room');setL('tvconsole','TV Console',5,1.5,'Living room');setL('bookshelf','Bookshelf',3,1,'Living room');setL('floorlamp','Floor Lamp (dressing)',1.2,1.2,'Living room','round','Lamp');
+setL('bedtwin','Bed (twin)',3.3,6.3,'Bedroom','bed','');setL('bedking','Bed (king)',6.3,6.7,'Bedroom','bed','');setL('nightstand','Nightstand',1.6,1.6,'Bedroom');setL('dresser','Dresser',5,1.6,'Bedroom');setL('wardrobe','Wardrobe',4,2,'Bedroom');
+setL('stove','Stove / Range',2.5,2.2,'Kitchen & dining');setL('sink','Sink',2.5,2,'Kitchen & dining');setL('diningtable','Dining Table',6,3.5,'Kitchen & dining','table');setL('stool','Stool',1.2,1.2,'Kitchen & dining','round','');
+setL('officechair','Office Chair',2,2,'Office','chair','');setL('filecab','Filing Cabinet',1.3,2.2,'Office');setL('conftable','Conference Table',10,4,'Office','table');setL('cubicle','Cubicle Partition',6,.3,'Office');
+setL('barcounter','Bar Counter',10,2,'Bar & restaurant');setL('booth','Booth Seat',5,2.2,'Bar & restaurant','couch','');setL('hightop','High-top Table',2.5,2.5,'Bar & restaurant','round');setL('stage','Stage / Riser',8,6,'Bar & restaurant');
+setL('toilet','Toilet',1.5,2.3,'Bathroom');setL('bathtub','Bathtub',2.5,5,'Bathroom');setL('vanity','Vanity',3,1.8,'Bathroom');setL('shower','Shower',3,3,'Bathroom');
+setL('truck','Truck / Van',6.5,18,'Vehicles','car','');setL('motorcycle','Motorcycle',2.5,7,'Vehicles');setL('bicycle','Bicycle',2,5.5,'Vehicles');
+setL('tree','Tree',6,6,'Exterior','plant','');setL('bush','Bush / Hedge',3,3,'Exterior','plant','');setL('fence','Fence Section',8,.3,'Exterior');setL('streetlamp','Street Lamp',1,1,'Exterior','round','Lamp');setL('bench','Bench',5,1.6,'Exterior');setL('picnic','Picnic Table',6,5,'Exterior','table');setL('dumpster','Dumpster',6,3.5,'Exterior');setL('popup','Pop-up Tent 10×10',10,10,'Exterior','rug','Tent');setL('curb','Curb / Sidewalk Edge',12,.4,'Exterior','box','');
+const mountL=(key,name,w,h)=>def(key,{cat:'Set',group:'Wall-mounted',name,kind:'set',shape:'box',wallSnap:true,wallMount:true,defaults:{w,h,label:name.replace(/ \(.*\)/,'')}});
+mountL('tv','TV',4,.3);mountL('picture','Picture Frame',2.5,.2);mountL('mirror','Mirror',2.5,.2);mountL('shelf','Shelf',3,.8);mountL('sconce','Wall Sconce (dressing)',.8,.5);mountL('whiteboard','Whiteboard',6,.2);mountL('radiator','Radiator',3,.6);mountL('curtain','Curtain',5,.5);mountL('cabinets','Wall Cabinets',6,1.1);
 def('text',{cat:'Set',group:'Annotation',name:'Text Label',kind:'text',shape:'text',defaults:{text:'Label',fsize:0.8}});
 def('north',{cat:'Set',group:'Annotation',name:'North Arrow',kind:'set',shape:'north',defaults:{w:1.5,h:1.5}});
 // Power
@@ -1623,11 +1634,12 @@ $('#bProjects').onclick=async()=>{openModal('<h3>Projects</h3><div class="empty"
 $('#bHelp').onclick=()=>openModal(`<h3>How to use it</h3>
 <div style="font-size:12.5px;color:#c9ced5;line-height:1.55;margin-bottom:12px">
 <b>1. Break it down.</b> Open the library panel (top-left button or <b>[</b>) to add scenes, setups and shots, or import your shot list from the <b>Shot list</b> button. A new setup carries over the walls, set pieces, actors and power, but not the lights.<br>
-<b>2. Build the room.</b> Press <b>B</b> and drag out a room — its size shows as you drag — or click once to type exact dimensions. For odd shapes use <b>W</b>: walls stay straight on their own, each wall shows its length, and you can type a length and press Enter. Select a wall and drag a white handle to push it in or out; doors and windows move with it.<br>
-<b>3. Furnish and light it.</b> Pick anything from the library and click to drop it. Furniture snaps flush to walls. The bar above the plan shows the selected item's size, angle and the settings you change most; <b>More…</b> opens everything.<br>
+<b>2. Build the room.</b> Press <b>B</b> and drag out a room — its size shows as you drag — or click once to type exact dimensions. For odd shapes use <b>W</b>: walls stay straight on their own, each wall shows its length, and you can type a length and press Enter. Each side of a room is its own wall: tap one to change or delete just that side, or double-click to select the whole room. Start a wall on another wall and they join. With a wall selected, <b>Add corner</b> bends it and <b>Cut gap</b> removes a stretch. Doors and windows make their own opening and move with the wall. <b>Floor plan</b> (bottom bar) puts an image or PDF under the grid to trace over, and <b>Lock walls</b> keeps them still once the room is right.<br>
+<b>3. Furnish and light it.</b> Pick anything from the library and click to drop it. Furniture sits flush when you drop it near a wall, and wall-mounted pieces (TV, mirror, shelf) attach to the wall and move with it. Drop a camera on a dolly and they move as one; a dolly dropped on track lines up with it. The bar above the plan shows the selected item's size, angle and the settings you change most; <b>More…</b> opens everything.<br>
 <b>4. Block it.</b> Select an actor or camera and press <b>Draw move</b>. The path stays attached: move the actor or camera and the path follows; drag the path and the whole move goes together. Points snap to actors, marks, cameras and dolly track.<br>
 <b>5. Track it.</b> Paste the scene's sides into the <b>Script</b> tab and link lines to each shot. The <b>Shot list</b> shows every shot with its lens, cast, power and status.<br>
-<b>6. Export.</b> <b>Export → Shot sheet</b> lets you tick the fields and layers you want and previews the page.</div>
+<b>6. Export.</b> <b>Export → Shot sheet</b> lets you tick the fields and layers you want and previews the page. Add the director’s storyboard frame in the <b>Shot</b> tab and it prints beside the diagram.<br>
+<b>7. Calculators.</b> The <b>Calculators</b> button (bottom bar) has sun and moon, depth of field, lens finder and light falloff, all measured from this plot. They are planning estimates, not measurements: the plot is a placement reference, not a picture of what the lighting or framing will look like on set.</div>
 <div class="keys">
 <span><kbd>V</kbd> <kbd>H</kbd></span><span>Select · Pan (or hold <kbd>Space</kbd>, or drag empty space)</span>
 <span><kbd>B</kbd> <kbd>W</kbd></span><span>Room · Wall</span>
@@ -1854,7 +1866,7 @@ function skyTimes(s){const f=(body,th)=>{const p=min=>SKY[body](sunMs(s,min),+s.
   const sun=f('sun',-.833),moon=f('moon',.125);const g6=(()=>{const p=min=>SKY.sun(sunMs(s,min),+s.lat,+s.lng).alt;let am=null,pm=null,prev=p(0);for(let m=2;m<=1440;m+=2){const a=p(m);if(prev<6&&a>=6&&am==null)am=m;if(prev>=6&&a<6)pm=m;prev=a;}return {am,pm};})();return {sun,moon,g6};}
 function phaseName(p){return ['New moon','Waxing crescent','First quarter','Waxing gibbous','Full moon','Waning gibbous','Last quarter','Waning crescent'][Math.round(p*8)%8];}
 /* drawing */
-function sunSVG(items,o){const sc=scene(),s=sc.sun;if(!s||!s.on)return '';const C=o.C,px=o.px;const p=skyPos(s);const N=getNorth();const th=(N+p.az)*D2R;const sx=Math.sin(th),sy=-Math.cos(th);const Lx=-sx,Ly=-sy;const moon=s.body==='moon';const col=moon?'#a9c4ff':'#ffc94d';
+function sunSVG(items,o){const sc=o.tag==='sheet'&&window.__expSc?window.__expSc:scene(),s=sc.sun;if(!s||!s.on)return '';const C=o.C,px=o.px;const p=skyPos(s);const N=getNorth();const th=(N+p.az)*D2R;const sx=Math.sin(th),sy=-Math.cos(th);const Lx=-sx,Ly=-sy;const moon=s.body==='moon';const col=moon?'#a9c4ff':'#ffc94d';
   const walls=items.filter(isWall);const pts=walls.flatMap(w=>w.pts);const all=pts.length?pts:items.filter(i=>i.x!=null).map(i=>({x:i.x,y:i.y}));if(!all.length)return '';
   const x0=Math.min(...all.map(q=>q.x)),x1=Math.max(...all.map(q=>q.x)),y0=Math.min(...all.map(q=>q.y)),y1=Math.max(...all.map(q=>q.y));let out='';const up=p.alt>0;
   if(up){const tan=Math.tan(Math.max(p.alt,2)*D2R);const segs=walls.map(w=>[w.pts[0],w.pts[1]]);
@@ -2010,6 +2022,98 @@ function dofSVG(o){if(!CALC.open||CALC.tab!=='dof'||!CALC.dof.show)return '';con
   const P=(d,a)=>[c.x+d*Math.cos(a),c.y+d*Math.sin(a)];const [n1x,n1y]=P(r.near,a0-hf),[n2x,n2y]=P(r.near,a0+hf),[f1x,f1y]=P(far,a0-hf),[f2x,f2y]=P(far,a0+hf);const [lx,ly]=P(r.near,a0),[mx,my]=P(far,a0);
   return `<g pointer-events="none"><path d="M${n1x} ${n1y} A${r.near} ${r.near} 0 0 1 ${n2x} ${n2y} L${f2x} ${f2y} A${far} ${far} 0 0 0 ${f1x} ${f1y}Z" fill="#35d0ba" opacity=".13"/><path d="M${n1x} ${n1y} A${r.near} ${r.near} 0 0 1 ${n2x} ${n2y} M${f1x} ${f1y} A${far} ${far} 0 0 1 ${f2x} ${f2y}" fill="none" stroke="#35d0ba" stroke-width="${1.6*px}" stroke-dasharray="${5*px} ${4*px}"/><text x="${lx}" y="${ly}" text-anchor="middle" font-family="${C.font}" font-weight="700" font-size=".55" fill="#35d0ba" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}">near ${fmtFt(r.near)}</text><text x="${mx}" y="${my}" text-anchor="middle" font-family="${C.font}" font-weight="700" font-size=".55" fill="#35d0ba" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}">far ${isFinite(r.far)?fmtFt(r.far):'∞'}</text></g>`;}
 {const _ri2=renderItems;renderItems=function(items,o){const L=_ri2(items,o);if(o&&!o.ghost&&o.dimSel){try{L.labels=(L.labels||'')+dofSVG(o);}catch(e){}}return L;};}
+
+/* ============================================================
+   Wall-mounted set pieces: sit flat on the wall's face and move with the wall
+   ============================================================ */
+const isMount=i=>i&&LIB[i.t]&&LIB[i.t].wallMount;
+{const _sw=snapToWall;snapToWall=function(it,p){const ok=_sw(it,p);if(!ok||!isMount(it))return ok;const a=(it.r||0)*D2R,nx=-Math.sin(a),ny=Math.cos(a);let side=Math.sign((p.x-it.x)*nx+(p.y-it.y)*ny);
+    if(!side){const ws=setup().items.filter(isWall).flatMap(w=>w.pts);const cx=ws.reduce((t,q)=>t+q.x,0)/(ws.length||1),cy=ws.reduce((t,q)=>t+q.y,0)/(ws.length||1);side=Math.sign((cx-it.x)*nx+(cy-it.y)*ny)||1;}
+    const off=.19+(+it.h||.3)/2;it.x=r2(it.x+nx*side*off);it.y=r2(it.y+ny*side*off);return true;};}
+{const _co=capOpenings;capOpenings=function(walls){const out=_co(walls);activeItems().forEach(op=>{if(!isMount(op))return;for(const wl of walls){for(let i=1;i<wl.pts.length;i++){const a=wl.pts[i-1],b=wl.pts[i];const L=Math.hypot(b.x-a.x,b.y-a.y);if(L<1e-6)continue;const ux=(b.x-a.x)/L,uy=(b.y-a.y)/L;const cx=op.x-a.x,cy=op.y-a.y;const t=cx*ux+cy*uy,perp=cx*-uy+cy*ux;
+        if(Math.abs(perp)<(+op.h||.3)/2+.45&&t>-.01&&t<L+.01){out.push({id:op.id,wid:wl.id,i,t,dr:(op.r||0)-Math.atan2(uy,ux)/D2R,off:perp});return;}}}});return out;};}
+{const _ro=reseatOpenings;reseatOpenings=function(caps){_ro(caps);(caps||[]).forEach(c=>{if(c.off==null)return;const f=findItem(c.id),fw=findItem(c.wid);if(!f||!fw)return;const a=fw.it.pts[c.i-1],b=fw.it.pts[c.i];if(!a||!b)return;const L=Math.hypot(b.x-a.x,b.y-a.y);if(L<1e-6)return;const ux=(b.x-a.x)/L,uy=(b.y-a.y)/L;f.it.x=r2(f.it.x-uy*c.off);f.it.y=r2(f.it.y+ux*c.off);});};}
+
+/* ============================================================
+   Camera rides the dolly; the dolly rides the track
+   ============================================================ */
+function dollyOf(cam){return cam.dolly?activeItems().find(i=>i.id===cam.dolly&&i.t==='dolly'):null;}
+function trackSnap(d){let best=null;activeItems().forEach(l=>{if(l.t!=='line'||l.kind!=='track')return;for(let k=1;k<l.pts.length;k++){const a=l.pts[k-1],b=l.pts[k];const L=Math.hypot(b.x-a.x,b.y-a.y);if(L<.1)continue;const ux=(b.x-a.x)/L,uy=(b.y-a.y)/L;const t=Math.max(0,Math.min(L,(d.x-a.x)*ux+(d.y-a.y)*uy));const q={x:a.x+ux*t,y:a.y+uy*t};const dist=Math.hypot(d.x-q.x,d.y-q.y);if(dist<1.4&&(!best||dist<best.dist))best={dist,q,ang:Math.atan2(uy,ux)/D2R};}});
+  if(!best)return false;d.x=r2(best.q.x);d.y=r2(best.q.y);d.r=Math.round(best.ang);return true;}
+function dollyFollow(){activeItems().forEach(c=>{if(c.t!=='camera'||!c.dolly)return;const d=dollyOf(c);if(d&&(c.x!==d.x||c.y!==d.y)){c.x=d.x;c.y=d.y;syncOwned(c);}});}
+{const _rc=renderCanvas;renderCanvas=function(){try{if(drag&&drag.type==='move'&&drag.moved){const ids=drag.ids||[];const moving=ids.map(id=>(findItem(id)||{}).it).filter(Boolean);
+      if(moving.length===1&&moving[0].t==='dolly')trackSnap(moving[0]);
+      activeItems().forEach(c=>{if(c.t!=='camera'||!c.dolly||ids.includes(c.id))return;const d=dollyOf(c);if(d&&ids.includes(d.id)){c.x=d.x;c.y=d.y;syncOwned(c);}});}}catch(e){}_rc();};}
+function dollySettle(){let msg='';const sel=new Set(selIds());activeItems().forEach(c=>{if(c.t!=='camera')return;const d=dollyOf(c);
+    if(c.dolly&&!d){delete c.dolly;return;}
+    if(d){if(sel.has(c.id)&&!sel.has(d.id)&&Math.hypot(c.x-d.x,c.y-d.y)>1.6){delete c.dolly;msg=`${c.cam||'A'} cam is off the dolly`;}else if(c.x!==d.x||c.y!==d.y){c.x=d.x;c.y=d.y;syncOwned(c);}return;}
+    if(sel.has(c.id)){const near=activeItems().find(i=>i.t==='dolly'&&Math.hypot(i.x-c.x,i.y-c.y)<1.4);if(near){c.dolly=near.id;c.x=near.x;c.y=near.y;c.support='Dolly';syncOwned(c);msg=`${c.cam||'A'} cam is on the dolly. Move the dolly and the camera goes with it.`;}}});
+  activeItems().forEach(d=>{if(d.t==='dolly'&&sel.has(d.id)&&sel.size===1)trackSnap(d);});dollyFollow();activeItems().forEach(c=>{if(c.t!=='camera'||!c.dolly)return;const fc=findItem(c.id),fd=findItem(c.dolly);if(fc&&fd&&fc.arr===fd.arr){const ic=fc.arr.indexOf(c),id=fd.arr.indexOf(fd.it);if(id>ic){fd.arr.splice(id,1);fd.arr.splice(ic,0,fd.it);}}});return msg;}
+{const settle=()=>setTimeout(()=>{if(drag&&ptrs.size)return;let m='';const before=JSON.stringify(activeItems().filter(i=>i.t==='camera'||i.t==='dolly').map(i=>[i.id,i.x,i.y,i.r,i.dolly]));try{m=dollySettle();}catch(e){}const after=JSON.stringify(activeItems().filter(i=>i.t==='camera'||i.t==='dolly').map(i=>[i.id,i.x,i.y,i.r,i.dolly]));if(before!==after){renderCanvas();renderQuick();scheduleSave();}if(m)toast(m);},0);window.addEventListener('pointerup',settle);window.addEventListener('keyup',e=>{if(/^Arrow/.test(e.key))settle();});}
+
+/* ============================================================
+   Images kept apart from the project file: floor plans and storyboard frames
+   ============================================================ */
+const IMG={};const IMGCOL=()=>DB.collection('data/users/'+UID+'/media/img');
+function idbOpen(){return new Promise(res=>{try{const r=indexedDB.open('lplot',1);r.onupgradeneeded=()=>{try{r.result.createObjectStore('img');}catch(e){}};r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);}catch(e){res(null);}});}
+async function imgPut(key,data){IMG[key]=data;let local=false;const d=await idbOpen();if(d){try{await new Promise((res,rej)=>{const t=d.transaction('img','readwrite');t.objectStore('img').put(data,key);t.oncomplete=res;t.onerror=rej;});local=true;}catch(e){}}
+  if(DB&&UID){try{await IMGCOL().doc(key).set({data});return 'account';}catch(e){}}return local?'browser':'memory';}
+async function imgGet(key){if(!key)return null;if(IMG[key])return IMG[key];const d=await idbOpen();if(d){try{const v=await new Promise(res=>{const q=d.transaction('img').objectStore('img').get(key);q.onsuccess=()=>res(q.result);q.onerror=()=>res(null);});if(v){IMG[key]=v;return v;}}catch(e){}}
+  if(DB&&UID){try{const s=await IMGCOL().doc(key).get();const v=s&&(typeof s.data==='function'?s.data():s);if(v&&v.data){IMG[key]=v.data;return v.data;}}catch(e){}}return null;}
+async function imgWarm(){if(!P)return;const keys=new Set();P.scenes.forEach(sc=>sc.setups.forEach(su=>{if(su.plan&&su.plan.img)keys.add(su.plan.img);su.shots.forEach(sh=>{if(sh.frame)keys.add(sh.frame);});}));let got=false;for(const k of keys){if(!IMG[k]&&await imgGet(k))got=true;}if(got){renderCanvas();if(V.rightTab==='shot')renderPanel();}}
+[1200,4500,12000].forEach(t=>setTimeout(imgWarm,t));{const _lp=loadProject;loadProject=function(id,json){_lp(id,json);setTimeout(imgWarm,200);};}
+async function fileToCanvas(file){if(/pdf$/i.test(file.type)||/\.pdf$/i.test(file.name)){if(!window.pdfjsLib){await new Promise(res=>{const sc=document.createElement('script');sc.src='pdf.min.js';sc.onload=res;sc.onerror=res;document.head.appendChild(sc);});if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='pdf.worker.min.js';}
+    if(!window.pdfjsLib)throw new Error('pdf');const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;const page=await pdf.getPage(1);const v0=page.getViewport({scale:1});const vp=page.getViewport({scale:Math.min(3,1800/Math.max(v0.width,v0.height))});const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);await page.render({canvasContext:x,viewport:vp}).promise;return c;}
+  const url=URL.createObjectURL(file);try{const im=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url;});const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0);return c;}finally{URL.revokeObjectURL(url);}}
+function shrink(src,maxDim,maxChars){let dim=maxDim;for(let n=0;n<8;n++){const k=Math.min(1,dim/Math.max(src.width,src.height));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(src.width*k));c.height=Math.max(1,Math.round(src.height*k));c.getContext('2d').drawImage(src,0,0,c.width,c.height);
+    for(const q of [.8,.65,.5]){const data=c.toDataURL('image/jpeg',q);if(data.length<=maxChars)return {data,w:c.width,h:c.height};}dim*=.8;}return null;}
+async function pickImage(maxDim){return new Promise(res=>{const inp=document.createElement('input');inp.type='file';inp.accept='image/*,application/pdf,.pdf';inp.onchange=async()=>{const f=inp.files[0];if(!f){res(null);return;}try{const c=await fileToCanvas(f);const s=shrink(c,maxDim,235000);if(!s){toast('That image could not be made small enough to save');res(null);return;}res(s);}catch(e){toast('That file could not be read. Try a PNG, JPG or PDF.');res(null);}};inp.click();});}
+const savedWhere=w=>w==='account'?'':w==='browser'?' It is stored in this browser only.':' It could not be stored and will be gone after a reload.';
+
+/* ---- floor plan under the diagram ---- */
+function planSVG(su,forExport){const pl=su.plan;if(!pl||!pl.img||!IMG[pl.img]||(forExport&&pl.exp===false))return '';const cx=pl.x+pl.w/2,cy=pl.y+pl.h/2;return `<image href="${IMG[pl.img]}" x="${pl.x}" y="${pl.y}" width="${pl.w}" height="${pl.h}" preserveAspectRatio="none" opacity="${pl.op==null?.5:pl.op}" transform="rotate(${pl.r||0} ${cx} ${cy})" pointer-events="none"/>`;}
+{const _ri3=renderItems;renderItems=function(items,o){const L=_ri3(items,o);if(o&&!o.ghost&&(o.dimSel||o.tag==='sheet')){try{L.floor=planSVG(o.tag==='sheet'&&window.__expSu?window.__expSu:setup(),o.tag==='sheet')+(L.floor||'');}catch(e){}}return L;};}
+function openPlan(){const su=setup(),pl=su.plan;const has=pl&&pl.img;
+  openModal(`<h3>Floor plan</h3><div class="pSub" style="margin-bottom:10px">Put an image or the first page of a PDF under the diagram, set its scale, then trace your walls over it. It belongs to this setup.</div>
+   ${has?`${IMG[pl.img]?`<img src="${IMG[pl.img]}" style="max-width:100%;max-height:160px;border-radius:6px;border:1px solid var(--line2);display:block;margin-bottom:10px">`:''}
+   <div class="f"><label>How visible it is</label><input type="range" id="plOp" min="10" max="100" value="${Math.round((pl.op==null?.5:pl.op)*100)}" style="width:100%"></div>
+   <div class="f2">${fld('Turn it, in degrees',`<input class="in" id="plRot" type="number" step="1" value="${pl.r||0}">`)}${fld('Width on the plot',`<input class="in" id="plW" value="${esc(fmtFtIn(pl.w))}">`)}</div>
+   <label class="chk" style="display:block;margin:4px 0 10px"><input type="checkbox" id="plExp" ${pl.exp!==false?'checked':''}> Show it in exports</label>
+   <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn pri" id="plScale">Set scale from two points</button><button class="btn" id="plMove">Move it</button><button class="btn" id="plNew">Replace</button><button class="btn danger" id="plDel">Remove</button></div>`
+   :`<button class="btn pri" id="plNew">Choose an image or PDF</button>`}
+   <div class="mFoot" style="margin-top:14px;display:flex;justify-content:flex-end"><button class="btn" data-close>Done</button></div>`);
+  const mb=$('#modalBox');mb.oninput=e=>{if(e.target.id==='plOp'){setup().plan.op=e.target.value/100;renderCanvas();scheduleSave();}};
+  mb.onchange=e=>{const pl=setup().plan;if(!pl)return;if(e.target.id==='plRot'){pl.r=+e.target.value||0;}if(e.target.id==='plExp'){pl.exp=e.target.checked;}if(e.target.id==='plW'){const w=parseFt(e.target.value);if(w>.5){const k=w/pl.w;const cx=pl.x+pl.w/2,cy=pl.y+pl.h/2;pl.w=r2(w);pl.h=r2(pl.h*k);pl.x=r2(cx-pl.w/2);pl.y=r2(cy-pl.h/2);}}renderCanvas();scheduleSave();};
+  mb.onclick=async e=>{const id=e.target.id;if(id==='plNew'){const s=await pickImage(1500);if(!s)return;snap();const key='p'+rid();const where=await imgPut(key,s.data);const w=30,h=w*s.h/s.w;const cx=V.vx+CW/V.zoom/2,cy=V.vy+CH/V.zoom/2;setup().plan={img:key,x:r2(cx-w/2),y:r2(cy-h/2),w,h:r2(h),r:0,op:.5,exp:true};changed();openPlan();toast('Floor plan added. Set its scale next.'+savedWhere(where));return;}
+    if(id==='plDel'){snap();delete setup().plan;changed();closeModal();toast('Floor plan removed');return;}
+    if(id==='plScale'){closeModal();V.planMode={type:'scale',pts:[]};planHint();return;}
+    if(id==='plMove'){closeModal();V.planMode={type:'move'};planHint();return;}};}
+function planHint(){const h=$('#hint');const m=V.planMode;if(!h||!m)return;const Y=s=>`<b style="color:#ffcf7a">${s}</b>`;h.innerHTML=m.type==='move'?`${Y('Move floor plan')} — drag it into place · Esc or Enter when done`:m.pts.length?`${Y('Set scale')} — now tap the other end of that known length`:`${Y('Set scale')} — tap one end of something whose real length you know (a wall, a doorway) · Esc to cancel`;}
+cv.addEventListener('pointerdown',e=>{const m=V.planMode;if(!m||e.button)return;const pl=setup().plan;if(!pl){V.planMode=null;return;}e.stopImmediatePropagation();e.preventDefault();const w=toWorld(e);
+  if(m.type==='move'){m.drag={sx:w.x,sy:w.y,ox:pl.x,oy:pl.y};try{cv.setPointerCapture(e.pointerId);}catch(x){}return;}
+  m.pts.push(w);if(m.pts.length<2){planHint();return;}const [a,b]=m.pts;const cur=Math.hypot(b.x-a.x,b.y-a.y);V.planMode=null;updHint();if(cur<.05){toast('Those two points are too close together');return;}
+  openModal(`<h3>Set the scale</h3><div class="f"><label for="plReal">How far apart are those two points in real life?</label><input class="in" id="plReal" placeholder="e.g. 12 or 12' 6&quot;"></div><div class="mFoot" style="display:flex;gap:6px;justify-content:flex-end"><button class="btn" data-close>Cancel</button><button class="btn pri" id="plRealGo">Set scale</button></div>`);setTimeout(()=>{const f=$('#plReal');if(f)f.focus();},30);
+  const go=()=>{const real=parseFt($('#plReal').value);if(!(real>.1)){toast('Type the real distance, like 12 or 12\' 6"');return;}snap();const k=real/cur;pl.x=r2(a.x+(pl.x-a.x)*k);pl.y=r2(a.y+(pl.y-a.y)*k);pl.w=r2(pl.w*k);pl.h=r2(pl.h*k);closeModal();changed();toast('Scale set. The plan now matches the grid: 1 square is 1 ft.');};
+  $('#modalBox').onclick=ev=>{if(ev.target.id==='plRealGo')go();};$('#modalBox').onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();go();}};},true);
+cv.addEventListener('pointermove',e=>{const m=V.planMode;if(!m||m.type!=='move'||!m.drag)return;e.stopImmediatePropagation();const w=toWorld(e);const pl=setup().plan;pl.x=r2(m.drag.ox+w.x-m.drag.sx);pl.y=r2(m.drag.oy+w.y-m.drag.sy);renderCanvas();},true);
+cv.addEventListener('pointerup',e=>{const m=V.planMode;if(!m||m.type!=='move'||!m.drag)return;e.stopImmediatePropagation();m.drag=null;scheduleSave();},true);
+window.addEventListener('keydown',e=>{if(V.planMode&&(e.key==='Escape'||e.key==='Enter')){V.planMode=null;updHint();e.stopPropagation();e.preventDefault();}},true);
+{const _rt3=renderTools;renderTools=function(){_rt3();const vb=$('#viewBar');if(vb&&!vb.querySelector('#bPlan')){vb.querySelector('#bCalc').insertAdjacentHTML('beforebegin',`<button class="btn sm" id="bPlan" title="Put a floor plan image or PDF under the diagram to trace over" style="margin-left:6px">Floor plan</button>`);vb.querySelector('#bPlan').onclick=openPlan;}};}
+
+/* ---- storyboard frame on each shot ---- */
+{const _rp2=renderPanel;renderPanel=function(){_rp2();if(V.rightTab!=='shot'||!UI.R)return;const sh=shot();const p=$('#panel');const img=sh.frame?IMG[sh.frame]:null;
+    p.insertAdjacentHTML('beforeend',`<div class="grp"><h4>Storyboard frame</h4>${sh.frame?(img?`<img src="${img}" style="width:100%;border-radius:6px;border:1px solid var(--line2);display:block;margin-bottom:8px">`:'<div class="pSub" style="margin-bottom:8px">Loading the image…</div>'):'<div class="pSub" style="margin-bottom:8px">Add the director’s viewfinder or storyboard image for this shot. It prints beside the diagram on the shot sheet.</div>'}<div style="display:flex;gap:6px"><button class="btn sm" data-fr="add">${sh.frame?'Replace':'Add an image'}</button>${sh.frame?'<button class="btn sm danger" data-fr="del">Remove</button>':''}</div></div>`);};}
+$('#panel').addEventListener('click',async e=>{const a=e.target.dataset&&e.target.dataset.fr;if(!a)return;const sh=shot();if(a==='del'){snap();delete sh.frame;delete sh.frameA;changed();return;}
+  const s=await pickImage(1100);if(!s)return;snap();const key='f'+rid();const where=await imgPut(key,s.data);sh.frame=key;sh.frameA=s.h/s.w;changed();toast('Storyboard frame added.'+savedWhere(where));});
+
+/* ---- furniture sits flush against a wall when dropped close to one ---- */
+function flushToWall(it){const L=LIB[it.t];if(!L||L.kind!=='set'||L.wallSnap||it.t==='north'||it.t==='rug'||!(+it.w)||!(+it.h))return false;let best=null;const hw=it.w/2,hh=it.h/2;
+  wallSegs(activeItems()).forEach(([a,b])=>{const len=Math.hypot(b.x-a.x,b.y-a.y);if(len<.5)return;const ux=(b.x-a.x)/len,uy=(b.y-a.y)/len,nx=-uy,ny=ux;const wa=Math.atan2(uy,ux)/D2R;let dl=(((it.r||0)-wa)%90+135)%90-45;if(Math.abs(dl)>14)return;
+    const r2n=(it.r||0)-dl;const k=Math.round((r2n-wa)/90);const en=(k%2===0)?hh:hw;const t=(it.x-a.x)*ux+(it.y-a.y)*uy;if(t<0||t>len)return;const dn=(it.x-a.x)*nx+(it.y-a.y)*ny;const gap=Math.abs(dn)-en-.19;if(gap>.8||gap<-en*.6)return;if(!best||Math.abs(gap)<Math.abs(best.gap))best={gap,nx,ny,s:Math.sign(dn)||1,r:r2n};});
+  if(!best||(Math.abs(best.gap)<.005&&Math.abs((it.r||0)-best.r)<.01))return false;it.x=r2(it.x-best.nx*best.s*best.gap);it.y=r2(it.y-best.ny*best.s*best.gap);it.r=Math.round((((best.r+540)%360)-180)*100)/100;return true;}
+{const last={};window.addEventListener('pointerup',()=>setTimeout(()=>{if(drag&&ptrs.size)return;const ids=selIds();if(ids.length!==1)return;const f=findItem(ids[0]);if(!f||f.it.t==='line')return;const it=f.it;const key=it.x+','+it.y;const was=last[it.id];last[it.id]=key;if(was===undefined||was===key||!V.snap)return;
+    try{if(flushToWall(it)){last[it.id]=it.x+','+it.y;renderCanvas();renderQuick();scheduleSave();}}catch(e){}},0));
+  cv.addEventListener('pointerdown',()=>setTimeout(()=>{const ids=selIds();if(ids.length===1){const f=findItem(ids[0]);if(f&&f.it.t!=='line'&&last[f.it.id]===undefined)last[f.it.id]=f.it.x+','+f.it.y;}},0));}
 const BRANDFF=(()=>{let o='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.type===5&&/EB Garamond|Lato/.test(r.cssText))o+=r.cssText;}catch(e){}}return o;})();
 /* ============================================================
    Export
@@ -2026,7 +2130,8 @@ const XDEF={layout:'sheet',theme:'paper',scope:'shot',format:'png',scale:1.5,lab
   header:true,f_scene:false,f_size:true,f_move:true,f_cam:true,f_cast:true,f_desc:true,f_blocking:true,f_intent:true,f_notes:true,f_script:false,lightKey:true,powerBlock:true,legend:true};
 function xo(){return Object.assign({},XDEF,P.exportOpts||{});}
 function sheetItems(su,sh,X){return activeItems(su,sh).filter(it=>{if(it.t==='line'){if(it.kind==='actor')return X.blocking;if(it.kind==='cable')return X.power;return true;}const L=LIB[it.t];if(!L)return false;if(L.kind==='talent'||L.kind==='mark')return X.blocking;if(L.kind==='grip')return X.grip;if(L.kind==='power')return X.power;return true;});}
-function buildSheet(sc,su,sh,X){
+function buildSheet(sc,su,sh,X){window.__expSu=su;window.__expSc=sc;try{return buildSheet0(sc,su,sh,X);}finally{window.__expSu=null;window.__expSc=null;}}
+function buildSheet0(sc,su,sh,X){
   X=X||xo();const dark=X.theme==='dark';const C=dark?THEMES.dark:THEMES.paper;
   const T=dark?{bg:'#15171a',ink:'#e3e6ea',sub:'#8d949e',band:'#23272c',rule:'#3a3f46',head:'#0c0d0f',off:'#5f6670',track:'#2a2e34'}:{bg:'#ffffff',ink:'#1d2024',sub:'#6b7280',band:'#f1f3f5',rule:'#c9ced5',head:'#16181b',off:'#9ca3af',track:'#eef0f3'};
   const Wd=1650,Ht=1275;const items=sheetItems(su,sh,X);const nums=lightNumbers(items);
@@ -2053,6 +2158,7 @@ function buildSheet(sc,su,sh,X){
     const room=n=>y+n<=YMAX;
     const sec=(title)=>{if(!room(60))return false;t+=`<rect x="${RX}" y="${y}" width="${RW}" height="24" fill="${T.band}"/>`+txt(RX+10,y+17,title,{size:15,gar:1,c:T.ink});y+=42;return true;};
     const para=(label,val,max,mono)=>{if(!val)return;const lines=wrapText(val,mono?52:58).slice(0,max||4);if(!room(18))return;t+=txt(RX+10,y,label,{size:12,c:T.sub});lines.forEach(l=>{if(!room(4))return;t+=txt(RX+130,y,l,{size:mono?11.5:12.5,mono});y+=mono?16:18;});y+=4;};
+    if(sh.frame&&IMG[sh.frame]&&sec('Storyboard frame')){const iw=RW-20,ih=Math.min(300,iw*(sh.frameA||.5625));t+=`<image href="${IMG[sh.frame]}" x="${RX+10}" y="${y-10}" width="${iw}" height="${ih}" preserveAspectRatio="xMidYMid meet"/>`;y+=ih+10;}
     if(X.f_scene&&sc.desc&&sec('Scene '+sc.num)){para('What happens',sc.desc,6);y+=6;}
     if(hasShot&&sec('Shot '+sh.num)){
       const cams=sh.items.filter(i=>i.t==='camera');const rows=[];
