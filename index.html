@@ -236,6 +236,18 @@ body.narrow #left{left:0} body.narrow #right{right:0}
 .cf{flex:none}.cf.cfS{display:none}
 @media (max-width:520px){.cf.cfF{display:none}.cf.cfS{display:inline}}
 @media (max-width:760px){#brand span{display:none}}
+
+#calc{position:absolute;left:10px;right:10px;bottom:52px;max-height:min(56%,440px);overflow:auto;background:rgba(23,25,28,.975);border:1px solid var(--line2);border-radius:10px;z-index:6;padding:10px 12px 12px;display:none;box-shadow:0 14px 34px rgba(0,0,0,.5)}
+#calc.open{display:block}
+.cHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.cHead .seg button{padding:6px 11px;font-size:12px}
+.cNote{font-size:11.5px;color:var(--sub);flex:1;min-width:200px}
+.cGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;align-items:start}
+.cGrid h4{margin:0 0 6px;font:500 16px/1.2 'EB Garamond',Garamond,Georgia,serif;color:var(--text)}
+.cBig{font-size:20px;font-weight:700;color:var(--text)}
+#calc svg.sky{width:100%;height:auto;display:block;border-radius:8px;background:#14171a;touch-action:none;cursor:ew-resize}
+#bCalc.on{background:var(--amber);border-color:var(--amber);color:#fff}
+@media (max-width:640px){#calc{bottom:96px;left:6px;right:6px;max-height:60%}}
 </style>
 </head>
 <body>
@@ -289,6 +301,7 @@ body.narrow #left{left:0} body.narrow #right{right:0}
       <div id="legendMini"></div>
       <div id="hint"></div>
       <div id="viewBar"></div>
+      <div id="calc"></div>
       <div id="zoomBox"><span id="sCoord"></span><span id="sZoom" hidden></span><span id="sCount" hidden></span><button class="btn sm" id="zOut" title="Zoom out (−)">−</button><button class="btn sm" id="zFit" title="Fit the plan (F)">Fit</button><button class="btn sm" id="zIn" title="Zoom in (+)">+</button></div>
     </div>
   </main>
@@ -299,7 +312,6 @@ body.narrow #left{left:0} body.narrow #right{right:0}
       <button class="rtab" data-t="shot">Shot</button>
       <button class="rtab" data-t="script">Script</button>
       <button class="rtab" data-t="power">Power</button>
-      <button class="rtab" data-t="sun">Sun</button>
       <button class="rtab" data-t="gear">Gear</button>
     </div>
     <div id="panel"></div>
@@ -1851,7 +1863,8 @@ function sunSVG(items,o){const sc=scene(),s=sc.sun;if(!s||!s.on)return '';const 
       items.filter(i=>i.t==='actor').forEach(a=>{const d=Math.min(5.6/tan,24);const nx=-Ly*.7,ny=Lx*.7;out+=`<path d="M${a.x+nx} ${a.y+ny} L${a.x-nx} ${a.y-ny} L${a.x+Lx*d-nx*.5} ${a.y+Ly*d-ny*.5} L${a.x+Lx*d+nx*.5} ${a.y+Ly*d+ny*.5}Z" fill="#000" opacity="${moon?.14:.24}"/>`;});}
     items.filter(i=>i.t==='window'||(i.t==='door'&&/^EXT|^INT/i.test(sc.ie||'')&&false)).forEach(wn=>{const a=(wn.r||0)*D2R,ux=Math.cos(a),uy=Math.sin(a),hw=(wn.w||4)/2;if(Math.abs(ux*Ly-uy*Lx)<.08)return;const c={x:wn.x,y:wn.y};const far={x:c.x+sx*200,y:c.y+sy*200};
       if(segs.some(g=>{const onOwn=Math.abs((c.x-g[0].x)*(g[1].y-g[0].y)-(c.y-g[0].y)*(g[1].x-g[0].x))/(Math.hypot(g[1].x-g[0].x,g[1].y-g[0].y)||1)<.35;return !onOwn&&hit(c,far,g[0],g[1]);}))return;
-      const d1=3/tan,d2=Math.min(7/tan,45);if(d1>40)return;const p1={x:c.x-ux*hw,y:c.y-uy*hw},p2={x:c.x+ux*hw,y:c.y+uy*hw};
+      const p1={x:c.x-ux*hw,y:c.y-uy*hw},p2={x:c.x+ux*hw,y:c.y+uy*hw};const reach=q=>{let best=1e9;segs.forEach(g=>{const rx=Lx,ry=Ly,qx=g[1].x-g[0].x,qy=g[1].y-g[0].y;const den=rx*qy-ry*qx;if(Math.abs(den)<1e-9)return;const t=((g[0].x-q.x)*qy-(g[0].y-q.y)*qx)/den,u=((g[0].x-q.x)*ry-(g[0].y-q.y)*rx)/den;if(t>.4&&u>=0&&u<=1&&t<best)best=t;});return best;};
+      const stop=Math.min(reach(p1),reach(p2),reach(c));const d1=3/tan,d2=Math.min(7/tan,45,stop);if(d1>40||d2<=d1)return;
       out+=`<path d="M${p1.x+Lx*d1} ${p1.y+Ly*d1} L${p2.x+Lx*d1} ${p2.y+Ly*d1} L${p2.x+Lx*d2} ${p2.y+Ly*d2} L${p1.x+Lx*d2} ${p1.y+Ly*d2}Z" fill="${col}" opacity="${moon?.22:.3}"/><path d="M${p1.x} ${p1.y} L${p1.x+Lx*d2} ${p1.y+Ly*d2} M${p2.x} ${p2.y} L${p2.x+Lx*d2} ${p2.y+Ly*d2}" stroke="${col}" stroke-width="${1*px}" stroke-dasharray="${4*px} ${4*px}" opacity=".55" fill="none"/>`;});}
   /* compass dial with the sun or moon on its rim */
   const R=2.2,cx=x1+R+2.5,cy=y0+R;const nx=Math.sin(N*D2R),ny=-Math.cos(N*D2R);const t=hhmm(s.min);const ty=cy+R+(ny>.35?2.6:1.5);
@@ -1897,32 +1910,106 @@ async function sunMapInit(){if(!MAP_OK)return;const slot=$('#sunMapSlot');if(!sl
     sunMap=L.map(sunMapEl,{zoomControl:true,attributionControl:true}).setView([+s.lat,+s.lng],17);
     sunLayers.street=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'});
     sunLayers.sat=L.tileLayer('https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token='+ESRI_KEY,{maxZoom:19,attribution:'Powered by Esri · Esri, Maxar, Earthstar Geographics, and the GIS User Community'});
-    let warned=false;sunLayers.sat.on('tileerror',()=>{if(warned)return;warned=true;toast('Satellite view did not load. Showing the street map.');sunLayer='street';sunMap.removeLayer(sunLayers.sat);sunLayers.street.addTo(sunMap);renderPanel();});
+    let warned=false;sunLayers.sat.on('tileerror',()=>{if(warned)return;warned=true;toast('Satellite view did not load. Showing the street map.');sunLayer='street';sunMap.removeLayer(sunLayers.sat);sunLayers.street.addTo(sunMap);renderCalc();});
     sunLayers[sunLayer].addTo(sunMap);sunPin=L.circleMarker([+s.lat,+s.lng],{radius:7,color:'#bd5103',fillColor:'#bd5103',fillOpacity:.9}).addTo(sunMap);
     sunMap.on('click',ev=>{const ll=ev.latlng;if(sunPick){sunPick.push(ll);if(sunPick.length<3){const h=$('#sunPickHint');if(h)h.textContent=sunPickText();return;}
         const [a,b,c]=sunPick;sunPick=null;const brg=(p,q)=>{const f1=p.lat*D2R,f2=q.lat*D2R,dl=(q.lng-p.lng)*D2R;return (Math.atan2(Math.sin(dl)*Math.cos(f2),Math.cos(f1)*Math.sin(f2)-Math.sin(f1)*Math.cos(f2)*Math.cos(dl))/D2R+360)%360;};
-        const wb=brg(a,b),mid={lat:(a.lat+b.lat)/2,lng:(a.lng+b.lng)/2},ob=brg(mid,c);const d1=Math.abs(((wb+90-ob+540)%360)-180),d2=Math.abs(((wb-90-ob+540)%360)-180);const B=(d1<d2?wb+90:wb-90+360)%360;const it=selItem();if(it){snap();northFromBearing(it,B);changed();toast(`That wall faces ${Math.round(B)}° ${compass(B)}. North is set.`);}return;}
+        const wb=brg(a,b),mid={lat:(a.lat+b.lat)/2,lng:(a.lng+b.lng)/2},ob=brg(mid,c);const d1=Math.abs(((wb+90-ob+540)%360)-180),d2=Math.abs(((wb-90-ob+540)%360)-180);const B=(d1<d2?wb+90:wb-90+360)%360;const it=selItem();if(it){snap();northFromBearing(it,B);changed();renderCalc();toast(`That wall faces ${Math.round(B)}° ${compass(B)}. North is set.`);}return;}
       const sn=sunOf();sn.lat=ll.lat;sn.lng=ll.lng;sn.place='';sunPin.setLatLng(ll);sunRefresh(true);});
   }else{slot.appendChild(sunMapEl);}
   setTimeout(()=>{try{sunMap.invalidateSize();}catch(e){}},30);}
-function sunRefresh(full){renderCanvas();scheduleSave();if(full)renderPanel();else{const o=$('#sunOut');if(o)o.innerHTML=sunReadout();const t=$('#sunT');if(t)t.textContent=hhmm(sunOf().min);}}
-{const _rp=renderPanel;renderPanel=function(){_rp();if(V.rightTab==='sun'&&UI.R){$('#panel').innerHTML=panelSun();sunMapInit();}};}
-$('#panel').addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.sun;if(k!=='min')return;e.stopPropagation();sunOf().min=+e.target.value;sunRefresh(false);},true);
-$('#panel').addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.sun;if(!k)return;e.stopPropagation();const s=sunOf();const v=e.target.value;
+function sunRefresh(full){renderCanvas();scheduleSave();if(full)renderCalc();else{calcSky();const o=$('#sunOut');if(o)o.innerHTML=sunReadout();const t=$('#sunT');if(t)t.textContent=hhmm(sunOf().min);}}
+$('#calc').addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.sun;if(k!=='min')return;e.stopPropagation();sunOf().min=+e.target.value;sunRefresh(false);},true);
+$('#calc').addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.sun;if(!k)return;e.stopPropagation();const s=sunOf();const v=e.target.value;
   if(k==='on'){s.on=e.target.checked;sunRefresh(false);return;}if(k==='min'){return;}
   if(k==='city'){if(v==='')return;const c=CITIES[+v];s.place=c[0];s.lat=c[1];s.lng=c[2];if(sunMap){sunMap.setView([c[1],c[2]],13);sunPin.setLatLng([c[1],c[2]]);}sunRefresh(true);return;}
-  if(k==='lat'||k==='lng'){const n=parseFloat(v);if(!isFinite(n)||Math.abs(n)>(k==='lat'?90:180)){renderPanel();return;}s[k]=n;s.place='';if(sunMap){sunMap.setView([+s.lat,+s.lng]);sunPin.setLatLng([+s.lat,+s.lng]);}sunRefresh(true);return;}
+  if(k==='lat'||k==='lng'){const n=parseFloat(v);if(!isFinite(n)||Math.abs(n)>(k==='lat'?90:180)){renderCalc();return;}s[k]=n;s.place='';if(sunMap){sunMap.setView([+s.lat,+s.lng]);sunPin.setLatLng([+s.lat,+s.lng]);}sunRefresh(true);return;}
   if(k==='date'){if(/^\d{4}-\d{2}-\d{2}$/.test(v)){s.date=v;sunRefresh(true);}return;}
   if(k==='off'){const n=parseFloat(v);s.off=isFinite(n)&&Math.abs(n)<=14?n:null;sunRefresh(true);return;}
-  if(k==='north'){const n=parseFloat(v);if(isFinite(n)){snap();setNorth(n);changed();}return;}},true);
-$('#panel').addEventListener('click',async e=>{const t=e.target;if(t.dataset&&t.dataset.sunbody){sunOf().body=t.dataset.sunbody;sunRefresh(true);return;}
-  if(t.dataset&&t.dataset.sunlayer&&sunMap){const k=t.dataset.sunlayer;if(k!==sunLayer){sunMap.removeLayer(sunLayers[sunLayer]);sunLayer=k;sunLayers[k].addTo(sunMap);renderPanel();}return;}
-  if(t.id==='sunBearGo'){const B=parseFloat($('#sunBear').value);const it=selItem();if(!isFinite(B)||!it){toast('Type the compass reading as a number, 0 to 360');return;}snap();northFromBearing(it,B);changed();toast('North is set from that wall.');return;}
+  if(k==='north'){const n=parseFloat(v);if(isFinite(n)){snap();setNorth(n);changed();renderCalc();}return;}},true);
+$('#calc').addEventListener('click',async e=>{const t=e.target;if(t.dataset&&t.dataset.sunbody){sunOf().body=t.dataset.sunbody;sunRefresh(true);return;}
+  if(t.dataset&&t.dataset.sunlayer&&sunMap){const k=t.dataset.sunlayer;if(k!==sunLayer){sunMap.removeLayer(sunLayers[sunLayer]);sunLayer=k;sunLayers[k].addTo(sunMap);renderCalc();}return;}
+  if(t.id==='sunBearGo'){const B=parseFloat($('#sunBear').value);const it=selItem();if(!isFinite(B)||!it){toast('Type the compass reading as a number, 0 to 360');return;}snap();northFromBearing(it,B);changed();renderCalc();toast('North is set from that wall.');return;}
   if(t.id==='sunPick'){sunPick=[];const h=$('#sunPickHint');if(h)h.textContent=sunPickText();return;}
   if(t.id==='sunGo'){const q=$('#sunQ').value.trim();if(!q)return;const r=$('#sunRes');r.innerHTML='<div class="pSub">Searching…</div>';try{const res=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q='+encodeURIComponent(q));const js=await res.json();
       r.innerHTML=js.length?js.map((o,i)=>`<button class="btn sm" data-sunhit="${i}" style="display:block;width:100%;text-align:left;margin-bottom:4px;white-space:normal;height:auto;padding:6px 8px">${esc(o.display_name)}</button>`).join(''):'<div class="pSub">Nothing found. Try adding the city.</div>';r._hits=js;}catch(x){r.innerHTML='<div class="pSub">The search did not respond. Type coordinates or pick a city instead.</div>';}return;}
   if(t.dataset&&t.dataset.sunhit!=null){const o=($('#sunRes')._hits||[])[+t.dataset.sunhit];if(!o)return;const s=sunOf();s.lat=+o.lat;s.lng=+o.lon;s.place=o.display_name.split(',').slice(0,2).join(',');if(sunMap){sunMap.setView([s.lat,s.lng],18);sunPin.setLatLng([s.lat,s.lng]);}sunRefresh(true);return;}});
 $('#sunQ')||document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='sunQ'){e.preventDefault();const b=$('#sunGo');if(b)b.click();}});
+
+/* ============================================================
+   Calculators dock (below the diagram): planning estimates tied to the plot
+   ============================================================ */
+const CALC={open:false,tab:'sun',dof:{cam:'',act:'',stop:2.8,coc:'',show:true},lens:{cam:'',act:'',width:8},fall:{light:'',act:'',to:''}};
+const camsNow=()=>activeItems().filter(i=>i.t==='camera'),actsNow=()=>activeItems().filter(i=>i.t==='actor'),lightsNow=()=>activeItems().filter(i=>LIB[i.t]&&LIB[i.t].kind==='light');
+const pick=(arr,id)=>arr.find(i=>i.id===id)||arr[0]||null;const distFt=(a,b)=>a&&b?Math.hypot(a.x-b.x,a.y-b.y):0;
+const camName=c=>`${c.cam||'A'} cam · ${lensLabel(c)}`;const lightName=l=>(l.label||LIB[l.t].name);
+function cocFor(c){const sw=SENSORS[c.sensor]||21.18;return sw<=14?.011:sw<=18?.015:sw<=26?.025:.03;}
+function dofCalc(){const c=pick(camsNow(),CALC.dof.cam),a=pick(actsNow(),CALC.dof.act);if(!c||!a)return null;const f=+c.lens||35,N=Math.max(.7,+CALC.dof.stop||2.8),coc=+CALC.dof.coc||cocFor(c);const d=distFt(c,a),sm=d*304.8;
+  if(sm<=f*1.5)return {c,a,d,tooClose:true};const H=f*f/(N*coc)+f;const near=sm*(H-f)/(H+sm-2*f),far=sm>=H?Infinity:sm*(H-f)/(H-sm);return {c,a,d,f,N,coc,H:H/304.8,near:near/304.8,far:far/304.8};}
+const selOpt=(arr,id,name)=>arr.map(i=>`<option value="${i.id}" ${i.id===id?'selected':''}>${esc(name(i))}</option>`).join('');
+function skyChart(){const s=sunOf();const W=340,H=170,x=m=>18+m/1440*(W-30),y=a=>H-34-(a+20)/110*(H-48);const path=body=>{let d='';for(let m=0;m<=1440;m+=10){const a=SKY[body](sunMs(s,m),+s.lat,+s.lng).alt;d+=(m?'L':'M')+x(m).toFixed(1)+' '+y(Math.max(-20,a)).toFixed(1)+' ';}return d;};
+  const T=skyTimes(s);const sun=SKY.sun(sunMs(s),+s.lat,+s.lng),moon=SKY.moon(sunMs(s),+s.lat,+s.lng);const hz=y(0);let o=`<svg class="sky" id="skyChart" viewBox="0 0 ${W} ${H}"><rect x="${x(0)}" y="${hz}" width="${x(1440)-x(0)}" height="${y(-20)-hz}" fill="#0c0e10"/>`;
+  if(T.sun.rise!=null&&T.sun.set!=null)o+=`<rect x="${x(T.sun.rise)}" y="${y(90)}" width="${x(T.sun.set)-x(T.sun.rise)}" height="${hz-y(90)}" fill="#ffc94d" opacity=".06"/>`+(T.g6.am?`<rect x="${x(T.sun.rise)}" y="${y(90)}" width="${Math.max(0,x(T.g6.am)-x(T.sun.rise))}" height="${hz-y(90)}" fill="#ff9d3b" opacity=".16"/>`:'')+(T.g6.pm?`<rect x="${x(T.g6.pm)}" y="${y(90)}" width="${Math.max(0,x(T.sun.set)-x(T.g6.pm))}" height="${hz-y(90)}" fill="#ff9d3b" opacity=".16"/>`:'');
+  o+=`<line x1="${x(0)}" x2="${x(1440)}" y1="${hz}" y2="${hz}" stroke="#5b636d" stroke-width="1"/><text x="${x(1440)}" y="${hz-4}" text-anchor="end" font-size="8.5" fill="#8b949e">horizon</text>`;
+  [0,6,12,18,24].forEach(h=>{o+=`<line x1="${x(h*60)}" x2="${x(h*60)}" y1="${y(90)}" y2="${y(-20)}" stroke="#2a2f36" stroke-width="1"/><text x="${x(h*60)}" y="${H-20}" text-anchor="middle" font-size="9" fill="#8b949e">${['12a','6a','12p','6p','12a'][h/6]}</text>`;});
+  o+=`<path d="${path('moon')}" fill="none" stroke="#a9c4ff" stroke-width="1.6" stroke-dasharray="4 3" opacity="${s.body==='moon'?1:.6}"/><path d="${path('sun')}" fill="none" stroke="#ffc94d" stroke-width="2" opacity="${s.body==='moon'?.6:1}"/>`;
+  o+=`<line x1="${x(s.min)}" x2="${x(s.min)}" y1="${y(90)}" y2="${y(-20)}" stroke="#fff" stroke-width="1" opacity=".7"/><circle cx="${x(s.min)}" cy="${y(Math.max(-20,moon.alt))}" r="5" fill="#a9c4ff" stroke="#14171a" stroke-width="1.5"/><circle cx="${x(s.min)}" cy="${y(Math.max(-20,sun.alt))}" r="6.5" fill="#ffc94d" stroke="#14171a" stroke-width="1.5"/>`;
+  o+=`<text x="18" y="${H-5}" font-size="9" fill="#ffc94d">● sun${T.sun.rise!=null?` · up ${hhmm(T.sun.rise)}, down ${hhmm(T.sun.set)}`:''}</text><text x="${W-12}" y="${H-5}" text-anchor="end" font-size="9" fill="#a9c4ff">● moon</text></svg>`;return o;}
+function skyDome(){const s=sunOf();const N=getNorth();const S=170,c=S/2,R=62;const pt=(az,alt)=>{const r=R*(1-Math.max(0,alt)/90),t=(N+az)*D2R;return [c+r*Math.sin(t),c-r*Math.cos(t)];};
+  const arc=body=>{let d='',pen=false;for(let m=0;m<=1440;m+=10){const p=SKY[body](sunMs(s,m),+s.lat,+s.lng);if(p.alt<0){pen=false;continue;}const [px,py]=pt(p.az,p.alt);d+=(pen?'L':'M')+px.toFixed(1)+' '+py.toFixed(1)+' ';pen=true;}return d;};
+  const sun=SKY.sun(sunMs(s),+s.lat,+s.lng),moon=SKY.moon(sunMs(s),+s.lat,+s.lng);let o=`<svg class="sky" style="cursor:default" viewBox="0 0 ${S} ${S}"><circle cx="${c}" cy="${c}" r="${R}" fill="#1b2026" stroke="#5b636d"/><circle cx="${c}" cy="${c}" r="${R*2/3}" fill="none" stroke="#2a2f36"/><circle cx="${c}" cy="${c}" r="${R/3}" fill="none" stroke="#2a2f36"/>`;
+  [['N',0],['E',90],['S',180],['W',270]].forEach(([l,a])=>{const t=(N+a)*D2R;o+=`<text x="${c+(R+10)*Math.sin(t)}" y="${c-(R+10)*Math.cos(t)+3.5}" text-anchor="middle" font-size="${l==='N'?11:9}" font-weight="${l==='N'?700:400}" fill="${l==='N'?'#fff':'#8b949e'}">${l}</text>`;});
+  o+=`<path d="${arc('moon')}" fill="none" stroke="#a9c4ff" stroke-width="1.6" stroke-dasharray="4 3"/><path d="${arc('sun')}" fill="none" stroke="#ffc94d" stroke-width="2"/>`;
+  if(moon.alt>0){const [mx,my]=pt(moon.az,moon.alt);o+=`<circle cx="${mx}" cy="${my}" r="5" fill="#a9c4ff" stroke="#14171a" stroke-width="1.5"/>`;}if(sun.alt>0){const [ux,uy]=pt(sun.az,sun.alt);o+=`<circle cx="${ux}" cy="${uy}" r="6.5" fill="#ffc94d" stroke="#14171a" stroke-width="1.5"/>`;}
+  return o+`<text x="${c}" y="${S-3}" text-anchor="middle" font-size="8.5" fill="#8b949e">sky from above, turned to match your plot</text></svg>`;}
+function calcSky(){const a=$('#skyA'),b=$('#skyB');if(a)a.innerHTML=skyChart();if(b)b.innerHTML=skyDome();}
+function calcSunHTML(){const s=sunOf();const sel=selItem();const wsel=sel&&(isWall(sel)&&sel.pts.length===2||sel.t==='window'||sel.t==='door');
+  return `<div class="cGrid"><div><h4>Through the day</h4><div id="skyA">${skyChart()}</div><input type="range" data-sun="min" min="0" max="1435" step="5" value="${s.min}" style="width:100%;margin-top:6px"><div class="pSub">Drag the slider or the chart. Time: <b id="sunT" style="color:var(--text)">${hhmm(s.min)}</b></div>
+   <div class="f2" style="margin-top:6px">${fld('Date',`<input class="in" type="date" data-sun="date" value="${esc(s.date)}">`)}${fld('Hours from UTC',`<input class="in" data-sun="off" value="${sunOff(s)}" title="Local time at the location, in hours from UTC. New York is -5 in winter, -4 in summer.">`)}</div></div>
+  <div><h4>Right now on the plot</h4><div id="skyB" style="max-width:230px">${skyDome()}</div><div class="seg" style="margin:8px 0"><button data-sunbody="sun" class="${s.body!=='moon'?'on':''}">Sun</button><button data-sunbody="moon" class="${s.body==='moon'?'on':''}">Moon</button></div><label class="chk" style="display:block;margin-bottom:6px"><input type="checkbox" data-sun="on" ${s.on?'checked':''}> Draw it on this scene’s plot</label><div id="sunOut">${sunReadout()}</div></div>
+  <div><h4>Where</h4>${MAP_OK?`<div style="display:flex;gap:6px;margin-bottom:6px"><input class="in" id="sunQ" placeholder="Search an address or place" style="flex:1;min-width:0"><button class="btn sm" id="sunGo">Search</button></div><div id="sunRes"></div><div id="sunMapSlot"></div><div class="seg" style="margin:6px 0"><button data-sunlayer="street" class="${sunLayer!=='sat'?'on':''}">Street</button><button data-sunlayer="sat" class="${sunLayer==='sat'?'on':''}">Satellite</button></div><div class="pSub">Click the map to move the pin.</div>`:`<div class="pSub" style="margin-bottom:6px">Address search and the map work on the Clementine Films website version. Here, pick a city or type coordinates.</div>`}
+   ${fld('City',`<select class="in" data-sun="city"><option value="">${esc(s.place||'Custom location')}</option>${CITIES.map((c,i)=>`<option value="${i}">${c[0]}</option>`).join('')}</select>`)}<div class="f2">${fld('Latitude',`<input class="in" data-sun="lat" value="${(+s.lat).toFixed(5)}">`)}${fld('Longitude',`<input class="in" data-sun="lng" value="${(+s.lng).toFixed(5)}">`)}</div></div>
+  <div><h4>Which way the plot faces</h4>${fld('North on the plot, degrees clockwise from the top',`<input class="in" data-sun="north" value="${Math.round(getNorth()*10)/10}">`)}<div class="pSub" style="margin:2px 0 6px">Or select a wall or window on the plot, then give the compass reading you get looking out through it from inside:</div>
+   <div style="display:flex;gap:6px"><input class="in" id="sunBear" placeholder="${wsel?'Compass reading, e.g. 210':'Select a wall first'}" ${wsel?'':'disabled'} style="flex:1;min-width:0"><button class="btn sm" id="sunBearGo" ${wsel?'':'disabled'}>Set</button></div>${MAP_OK?`<button class="btn sm" id="sunPick" style="margin-top:6px" ${wsel?'':'disabled'}>Set from the map instead</button><div class="pSub" id="sunPickHint" style="margin-top:4px">${sunPick?sunPickText():''}</div>`:''}
+   <div class="note" style="margin-top:10px">This shows where the sun or moon is in the sky, not what is in the way. Buildings, trees, weather and curtains are not accounted for.</div></div></div>`;}
+function dofOut(){const r=dofCalc();if(!r)return '<div class="pSub">Put a camera and an actor on the plot to measure between them.</div>';if(r.tooClose)return '<div class="pSub">The camera and subject are too close together to calculate.</div>';const row=(a,b)=>`<div class="kv"><span>${a}</span><b>${b}</b></div>`;
+  let h=`<div class="cBig">${fmtFt(r.near)} to ${isFinite(r.far)?fmtFt(r.far):'infinity'}</div><div class="pSub" style="margin-bottom:6px">in acceptable focus${isFinite(r.far)?`, ${fmtFt(r.far-r.near)} deep`:''}</div>`+row('Focus distance (camera to '+esc(r.a.label||'subject')+')',fmtFt(r.d))+row('Lens and stop',`${r.f}mm at ${r.N}`)+row('Hyperfocal distance',fmtFt(r.H));
+  actsNow().filter(a=>a.id!==r.a.id).forEach(a=>{const d=distFt(r.c,a);h+=row(esc(a.label||'Actor')+' at '+fmtFt(d),d<r.near?'soft, in front of focus':d>r.far?'soft, behind focus':'in focus');});return h;}
+function calcDofHTML(){const D=CALC.dof;const cs=camsNow(),as=actsNow();const c=pick(cs,D.cam);
+  return `<div class="cGrid"><div><h4>Depth of field</h4>${fld('Camera',`<select class="in" data-c="dof.cam">${selOpt(cs,c&&c.id,camName)}</select>`)}${fld('Focus on',`<select class="in" data-c="dof.act">${selOpt(as,(pick(as,D.act)||{}).id,a=>a.label||'Actor')}</select>`)}
+   <div class="f2">${fld('Stop (T or f)',`<input class="in" type="number" step=".1" min=".7" data-c="dof.stop" value="${D.stop}">`)}${fld('Circle of confusion, mm',`<input class="in" data-c="dof.coc" value="${D.coc}" placeholder="${c?cocFor(c):.025}">`)}</div>
+   <label class="chk"><input type="checkbox" data-c="dof.show" ${D.show?'checked':''}> Draw the in-focus zone on the plot</label><div class="pSub" style="margin-top:6px">The distance is measured on the plot from the camera to the actor. Change the lens in the camera’s own settings.</div></div>
+   <div><h4>Result</h4><div id="calcOut">${dofOut()}</div></div></div>`;}
+function lensOut(){const L=CALC.lens;const c=pick(camsNow(),L.cam),a=pick(actsNow(),L.act);if(!c||!a)return '<div class="pSub">Put a camera and an actor on the plot to measure between them.</div>';const sw=SENSORS[c.sensor]||21.18,d=distFt(c,a),W=Math.max(.5,+L.width||8);const f=sw*d/W;const row=(x,y,on)=>`<div class="kv"${on?' style="color:var(--amber2)"':''}><span>${x}</span><b>${y}</b></div>`;
+  const fixed=LENSES.filter(l=>l.f);const best=fixed.slice().sort((p,q)=>Math.abs(p.f-f)-Math.abs(q.f-f))[0];let h=`<div class="cBig">about ${Math.round(f)}mm</div><div class="pSub" style="margin-bottom:6px">to see ${fmtFt(W)} across at ${fmtFt(d)} on this sensor</div>`;
+  fixed.forEach(l=>{h+=row(l.name,`${fmtFt(sw*d/l.f)} wide × ${fmtFt(sw*d/l.f*9/16)} high`,best&&l.id===best.id);});const z=LENSES.find(l=>l.min);if(z)h+=row(z.name,f>=z.min&&f<=z.max?`covers it at ${Math.round(f)}mm`:'out of its range');return h;}
+function calcLensHTML(){const L=CALC.lens;const cs=camsNow(),as=actsNow();
+  return `<div class="cGrid"><div><h4>Lens finder</h4>${fld('Camera',`<select class="in" data-c="lens.cam">${selOpt(cs,(pick(cs,L.cam)||{}).id,camName)}</select>`)}${fld('Subject',`<select class="in" data-c="lens.act">${selOpt(as,(pick(as,L.act)||{}).id,a=>a.label||'Actor')}</select>`)}${fld('How wide the frame should be at the subject, in feet',`<input class="in" type="number" step=".5" min=".5" data-c="lens.width" value="${L.width}">`)}<div class="pSub">A head-and-shoulders close-up is roughly 2 to 3 ft across; a full figure with some room is roughly 8 to 10 ft.</div></div>
+   <div><h4>Result</h4><div id="calcOut">${lensOut()}</div></div></div>`;}
+function fallOut(){const F=CALC.fall;const l=pick(lightsNow(),F.light),a=pick(actsNow(),F.act);if(!l||!a)return '<div class="pSub">Put a light and an actor on the plot to measure between them.</div>';const d1=distFt(l,a);const row=(x,y)=>`<div class="kv"><span>${x}</span><b>${y}</b></div>`;let h=`<div class="cBig">${fmtFt(d1)}</div><div class="pSub" style="margin-bottom:6px">from ${esc(lightName(l))} to ${esc(a.label||'the subject')} now</div>`;
+  const d2=parseFt(F.to);if(d2>.2&&d1>.2){const st=2*Math.log2(d1/d2);h+=row('Moved to '+fmtFt(d2),Math.abs(st)<.05?'no real change':`about ${Math.abs(st).toFixed(1)} stop${Math.abs(st)>=1.05?'s':''} ${st>0?'brighter':'darker'}`);}
+  [.5,1,2].forEach(n=>{h+=row(`${n} stop${n>1?'s':''} darker`,'at '+fmtFt(d1*Math.pow(2,n/2)));});h+=row('1 stop brighter','at '+fmtFt(d1/Math.SQRT2));return h;}
+function calcFallHTML(){const F=CALC.fall;const ls=lightsNow(),as=actsNow();
+  return `<div class="cGrid"><div><h4>Light falloff</h4>${fld('Light',`<select class="in" data-c="fall.light">${selOpt(ls,(pick(ls,F.light)||{}).id,lightName)}</select>`)}${fld('Lighting',`<select class="in" data-c="fall.act">${selOpt(as,(pick(as,F.act)||{}).id,a=>a.label||'Actor')}</select>`)}${fld('If the light moves to this distance',`<input class="in" data-c="fall.to" value="${esc(F.to)}" placeholder="e.g. 9 or 9' 6&quot;">`)}<div class="pSub">Uses the inverse-square rule, which fits small, hard sources. Large soft sources fall off more slowly up close, and it says nothing about how bright the light is to begin with.</div></div>
+   <div><h4>Result</h4><div id="calcOut">${fallOut()}</div></div></div>`;}
+const CTABS=[['sun','Sun & Moon'],['dof','Depth of field'],['lens','Lens finder'],['fall','Light falloff']];
+function renderCalc(){const el=$('#calc');if(!el)return;el.classList.toggle('open',CALC.open);const b=$('#bCalc');if(b)b.classList.toggle('on',CALC.open);if(!CALC.open){return;}
+  el.innerHTML=`<div class="cHead"><div class="seg">${CTABS.map(([k,n])=>`<button data-ctab="${k}" class="${CALC.tab===k?'on':''}">${n}</button>`).join('')}</div><span class="cNote"><b>Planning estimates, not measurements.</b> Use them to plan placement and confirm on set.</span><button class="btn sm" data-cclose="1">Close</button></div>`+(CALC.tab==='sun'?calcSunHTML():CALC.tab==='dof'?calcDofHTML():CALC.tab==='lens'?calcLensHTML():calcFallHTML());
+  if(CALC.tab==='sun')sunMapInit();}
+function calcLive(){if(!CALC.open)return;const o=$('#calcOut');if(o)o.innerHTML=CALC.tab==='dof'?dofOut():CALC.tab==='lens'?lensOut():CALC.tab==='fall'?fallOut():o.innerHTML;if(CALC.tab==='sun'){const out=$('#sunOut');if(out)out.innerHTML=sunReadout();calcSky();}}
+$('#calc').addEventListener('click',e=>{const t=e.target.closest('[data-ctab],[data-cclose]');if(!t)return;if(t.dataset.cclose){CALC.open=false;renderCalc();renderCanvas();return;}CALC.tab=t.dataset.ctab;renderCalc();renderCanvas();});
+const calcSet=e=>{const k=e.target.dataset&&e.target.dataset.c;if(!k)return;const [a,b]=k.split('.');CALC[a][b]=e.target.type==='checkbox'?e.target.checked:e.target.value;if(e.type==='change'&&e.target.tagName==='SELECT')renderCalc();else calcLive();renderCanvas();};
+$('#calc').addEventListener('input',calcSet);$('#calc').addEventListener('change',calcSet);
+/* drag on the day chart to scrub the time */
+{let scrub=false;const setT=e=>{const svg=$('#skyChart');if(!svg)return;const r=svg.getBoundingClientRect();const fx=(e.clientX-r.left)/r.width*340;let m=Math.round(((fx-18)/(340-30)*1440)/5)*5;m=Math.max(0,Math.min(1435,m));sunOf().min=m;const sl=$('#calc [data-sun=min]');if(sl)sl.value=m;sunRefresh(false);};
+  $('#calc').addEventListener('pointerdown',e=>{if(e.target.closest('#skyChart')){scrub=true;try{e.target.closest('#skyChart').setPointerCapture(e.pointerId);}catch(x){}setT(e);}});$('#calc').addEventListener('pointermove',e=>{if(scrub)setT(e);});window.addEventListener('pointerup',()=>{scrub=false;});}
+{const _rt2=renderTools;renderTools=function(){_rt2();const vb=$('#viewBar');if(vb&&!vb.querySelector('#bCalc')){vb.insertAdjacentHTML('beforeend',`<button class="btn sm ${CALC.open?'on':''}" id="bCalc" title="Sun and moon, depth of field, lens finder and light falloff, worked out from this plot" style="margin-left:6px">Calculators</button>`);vb.querySelector('#bCalc').onclick=()=>{CALC.open=!CALC.open;renderCalc();renderCanvas();};}};}
+{const _ch=changed;changed=function(a,b){_ch(a,b);if(CALC.open){const el=$('#calc');if(el&&el.contains(document.activeElement)&&document.activeElement.tagName!=='BUTTON')calcLive();else if(CALC.tab!=='sun')renderCalc();else{calcLive();const sel=selItem();const ok=sel&&(isWall(sel)&&sel.pts.length===2||sel.t==='window'||sel.t==='door');['sunBear','sunBearGo','sunPick'].forEach(id=>{const x=$('#'+id);if(x)x.disabled=!ok;});const sb=$('#sunBear');if(sb)sb.placeholder=ok?'Compass reading, e.g. 210':'Select a wall first';}}};}
+/* in-focus zone on the plot */
+function dofSVG(o){if(!CALC.open||CALC.tab!=='dof'||!CALC.dof.show)return '';const r=dofCalc();if(!r||r.tooClose)return '';const c=r.c,px=o.px,C=o.C;const a0=(c.r||0)*D2R,hf=hfov(c)/2*D2R;const far=isFinite(r.far)?Math.min(r.far,80):80;
+  const P=(d,a)=>[c.x+d*Math.cos(a),c.y+d*Math.sin(a)];const [n1x,n1y]=P(r.near,a0-hf),[n2x,n2y]=P(r.near,a0+hf),[f1x,f1y]=P(far,a0-hf),[f2x,f2y]=P(far,a0+hf);const [lx,ly]=P(r.near,a0),[mx,my]=P(far,a0);
+  return `<g pointer-events="none"><path d="M${n1x} ${n1y} A${r.near} ${r.near} 0 0 1 ${n2x} ${n2y} L${f2x} ${f2y} A${far} ${far} 0 0 0 ${f1x} ${f1y}Z" fill="#35d0ba" opacity=".13"/><path d="M${n1x} ${n1y} A${r.near} ${r.near} 0 0 1 ${n2x} ${n2y} M${f1x} ${f1y} A${far} ${far} 0 0 1 ${f2x} ${f2y}" fill="none" stroke="#35d0ba" stroke-width="${1.6*px}" stroke-dasharray="${5*px} ${4*px}"/><text x="${lx}" y="${ly}" text-anchor="middle" font-family="${C.font}" font-weight="700" font-size=".55" fill="#35d0ba" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}">near ${fmtFt(r.near)}</text><text x="${mx}" y="${my}" text-anchor="middle" font-family="${C.font}" font-weight="700" font-size=".55" fill="#35d0ba" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}">far ${isFinite(r.far)?fmtFt(r.far):'∞'}</text></g>`;}
+{const _ri2=renderItems;renderItems=function(items,o){const L=_ri2(items,o);if(o&&!o.ghost&&o.dimSel){try{L.labels=(L.labels||'')+dofSVG(o);}catch(e){}}return L;};}
 const BRANDFF=(()=>{let o='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.type===5&&/EB Garamond|Lato/.test(r.cssText))o+=r.cssText;}catch(e){}}return o;})();
 /* ============================================================
    Export
