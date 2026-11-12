@@ -538,23 +538,15 @@ const PRESETS={
   k_f18s:{t:'flag',name:'18×24 Single Net',cat:'Grip',props:{size:'18×24',ftype:'Single net'}},
   k_f18d:{t:'flag',name:'18×24 Double Net',cat:'Grip',props:{size:'18×24',ftype:'Double net'}},
   k_f18silk:{t:'flag',name:'18×24 Silk',cat:'Grip',props:{size:'18×24',ftype:'Silk'}},
-  g_f1824sog:{t:'flag',name:'18×24 Flag (solid)',cat:'Grip',group:'Flags, nets & silks',props:{size:'18×24',ftype:'Solid flag'}},
-  g_f1824sit:{t:'flag',name:'18×24 Single Net',cat:'Grip',group:'Flags, nets & silks',props:{size:'18×24',ftype:'Single net'}},
-  g_f1824dot:{t:'flag',name:'18×24 Double Net',cat:'Grip',group:'Flags, nets & silks',props:{size:'18×24',ftype:'Double net'}},
-  g_f1824sik:{t:'flag',name:'18×24 Silk',cat:'Grip',group:'Flags, nets & silks',props:{size:'18×24',ftype:'Silk'}},
-  g_f2436sog:{t:'flag',name:'24×36 Flag (solid)',cat:'Grip',group:'Flags, nets & silks',props:{size:'24×36',ftype:'Solid flag'}},
-  g_f2436sit:{t:'flag',name:'24×36 Single Net',cat:'Grip',group:'Flags, nets & silks',props:{size:'24×36',ftype:'Single net'}},
-  g_f2436dot:{t:'flag',name:'24×36 Double Net',cat:'Grip',group:'Flags, nets & silks',props:{size:'24×36',ftype:'Double net'}},
-  g_f2436sik:{t:'flag',name:'24×36 Silk',cat:'Grip',group:'Flags, nets & silks',props:{size:'24×36',ftype:'Silk'}},
-  g_f44sog:{t:'flag',name:'4×4 Flag (solid)',cat:'Grip',group:'Flags, nets & silks',props:{size:'4×4',ftype:'Solid flag'}},
-  g_f44sit:{t:'flag',name:'4×4 Single Net',cat:'Grip',group:'Flags, nets & silks',props:{size:'4×4',ftype:'Single net'}},
-  g_f44dot:{t:'flag',name:'4×4 Double Net',cat:'Grip',group:'Flags, nets & silks',props:{size:'4×4',ftype:'Double net'}},
-  g_f44sik:{t:'flag',name:'4×4 Silk',cat:'Grip',group:'Flags, nets & silks',props:{size:'4×4',ftype:'Silk'}},
+  g_f2436sog:{t:'flag',name:'Flag (solid)',cat:'Grip',group:'Flags, nets & silks',props:{size:'24×36',ftype:'Solid flag'}},
+  g_f2436sit:{t:'flag',name:'Single Net',cat:'Grip',group:'Flags, nets & silks',props:{size:'24×36',ftype:'Single net'}},
+  g_f2436dot:{t:'flag',name:'Double Net',cat:'Grip',group:'Flags, nets & silks',props:{size:'24×36',ftype:'Double net'}},
+  g_f2436sik:{t:'flag',name:'Silk',cat:'Grip',group:'Flags, nets & silks',props:{size:'24×36',ftype:'Silk'}},
   g_pizza:{t:'bounce',name:'Pizza Box (bead board)',cat:'Grip',group:'Bounce',props:{size:'2×2',fabric:'Beadboard',side:'Bead (matte white)'}},
   g_surfer:{t:'bounce',name:'Silver Surfer',cat:'Grip',group:'Bounce',props:{size:'4×4',fabric:'Beadboard',side:'Silver, shiny'}},
-  g_bead44:{t:'bounce',name:'4×4 Bead Board',cat:'Grip',group:'Bounce',props:{size:'4×4',fabric:'Beadboard',side:'Bead (matte white)'}},
-  g_bead48:{t:'bounce',name:'4×8 Bead Board',cat:'Grip',group:'Bounce',props:{size:'4×8',fabric:'Beadboard',side:'Bead (matte white)'}},
-  g_foam44:{t:'bounce',name:'4×4 Foamcore',cat:'Grip',group:'Bounce',props:{size:'4×4',fabric:'Foamcore (white)',side:'White'}},
+  g_bead44:{t:'bounce',name:'Bead Board',cat:'Grip',group:'Bounce',props:{size:'4×4',fabric:'Beadboard',side:'Bead (matte white)'}},
+  
+  g_foam44:{t:'bounce',name:'Foamcore',cat:'Grip',group:'Bounce',props:{size:'4×4',fabric:'Foamcore (white)',side:'White'}},
   g_ultra:{t:'bounce',name:'Ultrabounce (on a frame)',cat:'Grip',group:'Bounce',props:{size:'4×4',fabric:'Ultrabounce',side:'White'}},
 
   k_flexfill:{t:'bounce',name:'Flexfill 38″ Reflector',cat:'Grip',props:{size:'Flexfill 38″',fabric:'Flexfill 38″ (5-in-1)'}},
@@ -2596,6 +2588,23 @@ function openOrganize(scId){const sc=P.scenes.find(s=>s.id===scId)||scene();snap
   tree.addEventListener('click',e=>{const b=e.target.closest('[data-organize]');if(b){e.stopPropagation();openOrganize(b.dataset.organize);}},true);}
 {const _rt=renderTree;renderTree=function(){_rt();$('#tree').querySelectorAll('.shotChip[data-shot]').forEach(c=>c.setAttribute('draggable','true'));
   const add=$('#tree').querySelector('[data-addsetup]');if(add&&!add.parentNode.querySelector('[data-organize]'))add.insertAdjacentHTML('afterend',` <button class="addMini" data-organize="${add.dataset.addsetup}" title="Move shots between setups, rename and add setups">⇄ organize</button>`);};}
+
+/* ============================================================
+   Grip sizes: one library entry per type, standard sizes picked on the item
+   ============================================================ */
+function reorder(obj,list){const old=Object.assign({},obj);Object.keys(obj).forEach(k=>delete obj[k]);list.forEach(([k,v])=>obj[k]=v);Object.keys(old).forEach(k=>{if(!(k in obj))obj[k]=old[k];});}
+reorder(FLAG_SIZES,[['12×18',1.5],['18×24',2],['24×30',2.5],['24×36',3],['30×36',3],['4×4',4],['40×40 floppy',3.33],['4×4 floppy',4],['10×42 cutter',3.5],['18×48 cutter',4],['24×72 cutter',6]]);
+reorder(BOUNCE_SIZES,[['Flexfill 22″',1.83],['Flexfill 32″',2.67],['Flexfill 38″',3.17],['Flexfill 42″',3.5],['Flexfill 52″',4.33],['2×2',2],['2×3',3],['4×4',4],['4×8',8]]);
+reorder(FRAME_SIZES,[['4×4',4],['6×6',6],['8×8',8],['12×12',12],['20×20',20]]);
+// standard-size picker right on the floating bar
+{const _rq=renderQuick;renderQuick=function(){_rq();const q=$('#quick');if(!q||!q.innerHTML||fromQuick)return;const it=selItem();if(!it||selIds().length!==1)return;
+  const opts=(k,list,v)=>`<select class="in" data-k="${k}" style="width:auto">${list.map(o=>`<option ${o===v?'selected':''}>${esc(o)}</option>`).join('')}</select>`;let h='';
+  if(it.t==='flag'||it.t==='negfill')h=`<label class="qf">Size${opts('size',Object.keys(FLAG_SIZES),it.size)}</label><label class="qf">Type${opts('ftype',FLAGTYPES,it.ftype)}</label>`;
+  else if(it.t==='frame')h=`<label class="qf">Size${opts('size',Object.keys(FRAME_SIZES),it.size)}</label><label class="qf">Fabric${opts('fabric',FABRICS,it.fabric)}</label>`;
+  else if(it.t==='bounce')h=`<label class="qf">Size${opts('size',Object.keys(BOUNCE_SIZES),it.size)}</label>`;
+  if(!h)return;const b=q.querySelector('b');if(b)b.insertAdjacentHTML('afterend',h);};}
+// the generic flag and bounce entries duplicate the typed ones above
+{const keep=LIBALL.filter(e=>!(!e.kit&&(e.key==='flag'||e.key==='bounce')));LIBALL.splice(0,LIBALL.length,...keep);}
 
 /* ============================================================
    Shooting days: list your days, put scenes / shots on them, export a day
