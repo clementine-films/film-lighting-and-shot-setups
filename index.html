@@ -2739,8 +2739,8 @@ function buildSheet0(sc,su,sh,X){
   if(X.header)head=`<rect x="0" y="0" width="${Wd}" height="${creditLine()?100:86}" fill="${T.head}"/>`+txt(30,38,fitTitle(P.title).t,{size:fitTitle(P.title).s,gar:1,c:'#fff'})+(creditLine()?txt(30,90,creditLine(),{size:13,c:'#ffffff'}):'')+`<text x="30" y="65" font-size="15" fill="#f0935a"><tspan font-family="${G}" font-weight="500" font-size="17">Scene ${esc(sc.num)}</tspan><tspan font-family="${M}" font-size="13" dx="12">${esc(sceneHeading(sc))}</tspan></text>`
      +txt(Wd-30,38,sh._setup?su.name:`Shot ${sh.num}`,{size:30,gar:1,c:'#fff',anchor:'end'})+txt(Wd-30,64,sh._setup?`Setup page · ${su.shots.length} shot${su.shots.length===1?'':'s'} · ${new Date().toLocaleDateString()}`:`${su.name} · ${new Date().toLocaleDateString()}`,{size:13,c:'#ffffff',anchor:'end'})+(X._pg?txt(Wd/2,74,X._pg,{size:12,c:'#ffffff',anchor:'middle'}):'');
   let frame=`<rect x="${DX}" y="${DY}" width="${DW}" height="${DH}" fill="none" stroke="${T.rule}"/>`;
-  frame+=txt(DX+276,DY+DH+21,[X.grid?'Grid: 1 square = 1 ft · bold lines every 5 ft':'',sh._setup?'Every camera position in this setup, labelled by shot':X.ghost&&su.shots.length>1?`faded cameras = other shots in ${su.name}`:'',!X.header?`${P.title} · Sc ${sc.num} · ${sh._setup?su.name:'Shot '+sh.num}${X._pg?' · '+X._pg:''}`:''].filter(Boolean).join(' · '),{size:11,c:T.sub});
-  frame+=txt(DX+276,DY+DH+39,'Planning reference for placement only. Not an exact representation of the lighting or framing on set.',{size:12,c:T.sub});
+  frame+=txt(DX+294,DY+DH+21,[X.grid?'Grid: 1 square = 1 ft · bold lines every 5 ft':'',sh._setup?'Every camera position in this setup, labelled by shot':X.ghost&&su.shots.length>1?`faded cameras = other shots in ${su.name}`:'',!X.header?`${P.title} · Sc ${sc.num} · ${sh._setup?su.name:'Shot '+sh.num}${X._pg?' · '+X._pg:''}`:''].filter(Boolean).join(' · '),{size:11,c:T.sub});
+  frame+=txt(DX+294,DY+DH+39,'Planning reference for placement only. Not an exact representation of the lighting or framing on set.',{size:12,c:T.sub});
   if(side){
     const room=n=>y+n<=YMAX;
     const sec=(title)=>{if(!room(60))return false;t+=`<rect x="${RX}" y="${y}" width="${RW}" height="24" fill="${T.band}"/>`+txt(RX+10,y+17,title,{size:15,gar:1,c:T.ink});y+=42;return true;};
@@ -2792,7 +2792,7 @@ async function exportOne(sc,su,sh,X){const svg=buildSheet(sc,su,sh,X);const name
   let png;try{png=await svgToPng(svg,X.scale);}catch(e){toast('PNG render failed — try SVG');return false;}
   for(let tries=0;tries<25;tries++){if(!downloadsNS)return saveFile(name+'.png',png);try{await downloadsNS.save({filename:name+'.png',data:png});return true;}catch(e){if(e&&e.code==='rate_limited'){await new Promise(r=>setTimeout(r,900));continue;}return false;}}return false;}
 // black tag on the bottom edge, cream wordmark, bottom-left of every printed page
-function cfBadge(Ht){const t='Clementine Films \u2022 Lighting Plot',w=250,h=32,x=30,y=Ht-h;return `<path d="M${x} ${Ht} V${y+4} Q${x} ${y} ${x+4} ${y} H${x+w-4} Q${x+w} ${y} ${x+w} ${y+4} V${Ht} Z" fill="#16181b"/><text x="${x+w/2}" y="${y+21}" text-anchor="middle" font-family="'EB Garamond',Garamond,Georgia,serif" font-style="italic" font-size="16" fill="#f3e9d7">${t}</text>`;}
+function cfBadge(Ht){const w=268,h=32,x=30,y=Ht-h;return `<path d="M${x} ${Ht} V${y+4} Q${x} ${y} ${x+4} ${y} H${x+w-4} Q${x+w} ${y} ${x+w} ${y+4} V${Ht} Z" fill="#16181b"/><text x="${x+w/2}" y="${y+21}" text-anchor="middle" font-family="'EB Garamond',Garamond,Georgia,serif" font-style="italic" font-size="16" fill="#f3e9d7">Clementine Films\u00a0\u00a0\u2022\u00a0\u00a0<tspan font-family="Lato,Helvetica,Arial,sans-serif" font-style="normal" font-weight="700" font-size="11.5" letter-spacing="1.6">LIGHTING PLOT</tspan></text>`;}
 // long titles shrink (and if needed trim) so they never run into the centre wordmark
 function fitTitle(t){t=String(t||'Untitled');const max=660;let sz=28;const w=z=>t.length*z*.56;while(sz>15&&w(sz)>max)sz-=1;if(w(sz)>max){const n=Math.floor(max/(sz*.56))-1;t=t.slice(0,n).trim()+'…';}return {t,s:sz};}
 // ---- credits printed under the title on every page ----
@@ -2829,7 +2829,7 @@ function pageFrame(X,title,right,sub,pg){const T=pageTheme(X);const Wd=1650,Ht=1
   const head=`<rect x="0" y="0" width="${Wd}" height="${creditLine()?100:86}" fill="${T.head}"/>`+txt(30,38,fitTitle(P.title).t,{size:fitTitle(P.title).s,gar:1,c:'#fff'})+(creditLine()?txt(30,90,creditLine(),{size:13,c:'#ffffff'}):'')+txt(30,65,sub,{size:17,gar:1,c:'#f0935a'})
     +txt(Wd/2,74,pg,{size:12,c:'#ffffff',anchor:'middle'})
     +txt(Wd-30,38,title,{size:30,gar:1,c:'#fff',anchor:'end'})+txt(Wd-30,64,right,{size:13,c:'#ffffff',anchor:'end'});
-  const foot=cfBadge(Ht)+txt(296,Ht-14,'Planning reference for placement only. Not an exact representation of the lighting or framing on set.',{size:11,c:T.sub});
+  const foot=cfBadge(Ht)+txt(314,Ht-14,'Planning reference for placement only. Not an exact representation of the lighting or framing on set.',{size:11,c:T.sub});
   const wrap=inner=>`<svg xmlns="http://www.w3.org/2000/svg" width="${Wd}" height="${Ht}" viewBox="0 0 ${Wd} ${Ht}"><defs><style>${BRANDFF}</style></defs><rect width="${Wd}" height="${Ht}" fill="${T.bg}"/>${head}${inner}${foot}</svg>`;
   return {T,txt,wrap};}
 function contentsSVG(X,plan,part){const {pages,rows}=plan;const total=pages.length;const nc=pages.filter(p=>p.kind==='contents').length;
