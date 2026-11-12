@@ -293,6 +293,13 @@ body.narrow #left{left:0} body.narrow #right{right:0}
 .xCred{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin-bottom:8px}.xCred label{display:flex;flex-direction:column;gap:2px;color:var(--text)}
 
 .turnTag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.3px;padding:0 5px;border-radius:4px;background:#bd5103;color:#fff;margin-left:4px;vertical-align:1px}
+#exBar{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:6;display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;max-width:min(760px,calc(100% - 140px));padding:8px 10px 8px 12px;border:1.5px solid #bd5103;border-left-width:5px;border-radius:8px;background:var(--panel);color:var(--text);font-size:12.5px;line-height:1.4;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+#exBar[hidden]{display:none}
+#exBar b{color:#bd5103;white-space:nowrap}
+#exBar span{flex:1 1 260px}
+#exBar .exBtns{display:flex;gap:6px;align-items:center}
+#exBar .exX{background:none;border:0;color:var(--text);font-size:18px;line-height:1;cursor:pointer;padding:0 4px}
+@media (max-width:640px){#exBar{left:60px;right:8px;transform:none;max-width:none}#exBar span{display:none}}
 </style>
 </head>
 <body>
@@ -342,6 +349,7 @@ body.narrow #left{left:0} body.narrow #right{right:0}
   <main id="center">
     <div id="stage">
       <svg id="cv" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="exBar" hidden></div>
       <div id="tools"></div>
       <div id="quick"></div>
       <div id="legendMini"></div>
@@ -640,7 +648,7 @@ function newItem(t,x,y,extra){const pr=PRESETS[t];if(pr){extra=Object.assign({},
 function newLine(kind,pts){const it={id:rid(),t:'line',kind,pts:pts.map(p=>({x:r2(p.x),y:r2(p.y)})),label:'',color:LINES[kind].color};it.scope=defaultScope(it);return it;}
 
 function demoProject(){
-  const p={v:1,title:'Untitled Short',settings:{volts:120,breaker:20},scenes:[]};
+  const p={v:1,example:true,title:'Example: Untitled Short',settings:{volts:120,breaker:20},scenes:[]};
   const sc=mkScene(1);sc.ie='INT.';sc.loc='APARTMENT KITCHEN';sc.tod='NIGHT';
   sc.desc='Example scene — replace with your own. MAYA comes home late and finds JONAH waiting at the table. She crosses to the counter; he stands.';
   const su=sc.setups[0];su.name='Setup A — Wide';su.notes='Motivated by the pendant practical over the table and cool streetlight through the window. Keep the far wall falling off to black.';
@@ -1652,7 +1660,7 @@ $('#bUndo').onclick=undo;$('#bRedo').onclick=redo;
 /* ============================================================
    Change handling + persistence
    ============================================================ */
-function changed(rebuildPanel=true,noSave){renderTree();renderCanvas();if(rebuildPanel)renderPanel();updUndo();if(!noSave)scheduleSave();}
+function changed(rebuildPanel=true,noSave){renderTree();if(typeof renderExBar==='function')renderExBar();renderCanvas();if(rebuildPanel)renderPanel();updUndo();if(!noSave)scheduleSave();}
 let DB=null,UID=null,cloudOK=false,saveTimer=null,saving=false,dirty=false,downloadsNS=null;
 function setStat(cls,txt){const s=$('#saveStat');s.className=cls;s.querySelector('span').textContent=txt;}
 function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
@@ -1698,7 +1706,7 @@ function confirmBox(title,body,fn){openModal(`<h3>${esc(title)}</h3><div style="
 function showText(title,t){openModal(`<h3>${esc(title)}</h3><textarea class="in" style="height:300px;font:12px var(--mono)">${esc(t)}</textarea><div class="mFoot"><button class="btn" data-close>Close</button></div>`);}
 $('#bProjects').onclick=async()=>{openModal('<h3>Projects</h3><div class="empty">Loading…</div>');const list=await listProjects();
   openModal(`<h3>Projects</h3><div class="pSub">${DB?'Saved to your Claude account, so they appear wherever you open this page signed in.':'Saved in this browser only.'}</div>${list.map(p=>`<div class="projRow ${p.id===projId?'cur':''}"><div><b>${esc(p.title)}</b><small>${p.updated?new Date(p.updated).toLocaleString():''}</small></div>${p.id===projId?'<span style="font-size:11px;color:var(--amber)">open</span>':`<button class="btn sm" data-open="${p.id}">Open</button><button class="btn sm danger" data-delp="${p.id}">Delete</button>`}</div>`).join('')}
-  <div class="mFoot" style="justify-content:space-between"><div style="display:flex;gap:6px"><button class="btn" id="mNew">New blank project</button><button class="btn" id="mDemo">New from example</button></div><button class="btn" data-close>Close</button></div>`);
+  <div class="mFoot" style="justify-content:space-between"><div style="display:flex;gap:6px"><button class="btn" id="mNew">New blank project</button><button class="btn" id="mDemo">New example project</button></div><button class="btn" data-close>Close</button></div>`);
   $('#modalBox').onclick=async e=>{const o=e.target.closest('[data-open]');if(o){const p=list.find(x=>x.id===o.dataset.open);if(p){clearTimeout(saveTimer);if(dirty)await doSave();loadProject(p.id,p.json);closeModal();}}
     const d=e.target.closest('[data-delp]');if(d){const id=d.dataset.delp;const all=lsGet('lplot.projects')||{};delete all[id];lsSet('lplot.projects',all);if(DB&&UID){try{await DB.collection('data/users/'+UID).doc(id).delete();}catch(err){}}d.closest('.projRow').remove();toast('Project deleted');}
     if(e.target.id==='mNew'){if(dirty)await doSave();newProject(false);closeModal();}
@@ -2777,6 +2785,22 @@ function seqWord(map,list,v){const k=String(v||'').trim().toLowerCase();if(!k)re
   P.scenes.forEach(sc=>sc.setups.forEach(su=>{delete su._imp;su.shots.forEach(sh=>delete sh._imp);}));
   P.scenes.forEach(sc=>{sc.setups=sc.setups.filter(su=>su.shots.length||su.items.length||su.notes);if(!sc.setups.length){const su=mkSetup('Setup A');su.shots.push(mkShot(nextShotNum(sc)));sc.setups.push(su);}});
   normalize(P);fixView();changed();return {added,updated,setups,seq:true};};}
+/* ============================================================
+   Example project banner
+   ============================================================ */
+function renderExBar(){
+  const b=$('#exBar');if(!b)return;
+  if(!P||!P.example||V.exHide){b.hidden=true;b.innerHTML='';return;}
+  b.hidden=false;
+  b.innerHTML=`<b>This is an example project.</b><span>A sample kitchen scene with lights, cameras and two shots, so you can see how Shot Plot works. Look around, or start your own.</span><div class="exBtns"><button class="btn sm pri" data-ex="blank">Start a blank project</button><button class="btn sm" data-ex="keep" title="Keep this example as your starting point and stop showing this message">Build on this example</button><button class="exX" data-ex="hide" title="Hide for now">×</button></div>`;
+}
+document.addEventListener('click',async e=>{
+  const t=e.target.closest('[data-ex]');if(!t)return;
+  const a=t.dataset.ex;
+  if(a==='blank'){if(typeof dirty!=='undefined'&&dirty)await doSave();newProject(false);toast('New blank project');}
+  else if(a==='keep'){P.example=false;P.title=(P.title||'').replace(/^Example:\s*/,'')||'Untitled Production';changed();}
+  else if(a==='hide'){V.exHide=true;renderExBar();}
+});
 const BRANDFF=(()=>{let o='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.type===5&&/EB Garamond|Lato/.test(r.cssText))o+=r.cssText;}catch(e){}}return o;})();
 /* ============================================================
    Export
