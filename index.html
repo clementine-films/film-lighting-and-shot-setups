@@ -291,6 +291,8 @@ body.narrow #left{left:0} body.narrow #right{right:0}
 .dayShots{padding:0 0 6px 46px}.dayShRow{padding:3px 8px;font-size:12.5px}.dayShRow span{flex:1;min-width:0;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dayChip{margin-left:auto;font-size:10px;padding:1px 6px;border-radius:9px;background:color-mix(in srgb,var(--amber) 22%,transparent);color:var(--amber2);white-space:nowrap;flex:none}
 .xCred{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin-bottom:8px}.xCred label{display:flex;flex-direction:column;gap:2px;color:var(--text)}
+
+.turnTag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.3px;padding:0 5px;border-radius:4px;background:#bd5103;color:#fff;margin-left:4px;vertical-align:1px}
 </style>
 </head>
 <body>
@@ -1302,7 +1304,7 @@ function renderTree(){
   const cur=scene(),cs=setup(),csh=shot();
   $('#tree').innerHTML=P.scenes.map(sc=>{const open=sc.id===cur.id;
     return `<div class="scene"><div class="sRow ${open?'cur':''}" data-scene="${sc.id}"><span class="sNum">${esc(sc.num)}</span><span class="sHead" title="${esc(sceneHeading(sc))}">${esc(sceneHeading(sc))}</span></div>
-    ${open?sc.setups.map(su=>`<div class="setup"><div class="suRow ${su.id===cs.id?'cur':''}" data-setup="${su.id}">◐ ${esc(su.name)} <span style="color:var(--dim);font-size:10.5px">· ${su.items.filter(i=>LIB[i.t]&&LIB[i.t].kind==='light').length} lights</span></div>
+    ${open?sc.setups.map(su=>`<div class="setup"><div class="suRow ${su.id===cs.id?'cur':''}" data-setup="${su.id}">◐ ${esc(su.name)}${isTurn(su)?' <span class="turnTag" title="'+esc(buildLabel(su))+'">↺ turn</span>':''} <span style="color:var(--dim);font-size:10.5px">· ${su.items.filter(i=>LIB[i.t]&&LIB[i.t].kind==='light').length} lights</span></div>
       <div class="shots">${su.shots.map(s=>`<span class="shotChip ${s.id===csh.id?'cur':''}" data-shot="${s.id}" data-su="${su.id}" title="${esc(s.desc)}">${esc(s.num)}</span>`).join('')}<button class="addMini" data-addshot="${su.id}" title="New shot (copies this shot's camera)">+ shot</button></div></div>`).join('')+`<div style="margin:2px 0 6px 18px"><button class="addMini" data-addsetup="${sc.id}" title="New lighting setup (copies walls, set pieces & actors)">+ setup</button></div>`:''}</div>`;}).join('');
   const sc=cur,su=cs,sh=csh;
   $('#crumb').innerHTML=`<span class="slug">SC ${esc(sc.num)}</span> <b>${esc(sceneHeading(sc))}</b> › ${esc(su.name)} › <span class="slug" style="color:var(--teal)">${esc(sh.num)}</span> ${esc(sh.size)}${sh.move&&sh.move!=='Static'?' · '+esc(sh.move):''}${sh.desc?' — '+esc(sh.desc):''}`;
@@ -1446,7 +1448,7 @@ function panelShot(){
    ${fld('Time',`<input class="in" data-o="scene" data-k="tod" list="todList" value="${esc(sc.tod)}" placeholder="DAY, NIGHT, or type your own"><datalist id="todList">${['DAY','NIGHT','DAWN','DUSK','MAGIC HOUR','CONTINUOUS','LATER','MOMENTS LATER','SAME'].map(o=>`<option value="${o}">`).join('')}</datalist>`)}
    <div class="f"><label>Scene description</label><textarea class="in" data-o="scene" data-k="desc" rows="3" placeholder="What happens; tone; story beats">${esc(sc.desc)}</textarea></div>
    <div class="grp"><h4>Lighting setup</h4>
-   ${fld('Setup name',`<input class="in" data-o="setup" data-k="name" value="${esc(su.name)}">`)}
+   ${fld('Setup name',`<input class="in" data-o="setup" data-k="name" value="${esc(su.name)}">`)}${typeof buildField==='function'?buildField(sc,su):''}
    <div class="f"><label>Lighting intent</label><textarea class="in" data-o="setup" data-k="notes" rows="3" placeholder="Motivation, mood, contrast ratio, references">${esc(su.notes)}</textarea></div></div>
    <div class="grp"><h4>Shot ${esc(sh.num)}</h4>
    ${typeof dayField==='function'?dayField(sh):''}${fld('In setup',`<select class="in" data-mvsu="1">${sc.setups.map(x=>`<option value="${x.id}" ${x.id===su.id?'selected':''}>${esc(x.name)}</option>`).join('')}<option value="__new">New setup…</option></select>`)}
@@ -1460,7 +1462,7 @@ function panelShot(){
    <div class="kv"><span>Camera${cams.length>1?'s':''}</span><span>${cams.length?cams.map(c=>`${c.cam}: ${lensLabel(c)} · ${c.support}`).join(' / '):'none placed'}</span></div>
    <div class="kv"><span>Cast in shot</span><span style="font-family:var(--sans)">${cast.length?esc(cast.join(', ')):'—'}</span></div></div>
    <div class="grp"><h4>Manage</h4><div style="display:flex;flex-wrap:wrap;gap:6px">
-     <button class="btn sm" data-act="dupshot">Duplicate shot</button><button class="btn sm" data-act="dupsetup">Duplicate setup (with lights)</button>
+     <button class="btn sm" data-act="dupshot">Duplicate shot</button><button class="btn sm" data-act="dupsetup">Duplicate setup (with lights)</button><button class="btn sm" data-act="turnsetup" title="New setup facing the other way: room, actors and lights copied, no camera">Make turnaround</button>
      <button class="btn sm danger" data-act="delshot">Delete shot</button><button class="btn sm danger" data-act="delsetup">Delete setup</button><button class="btn sm danger" data-act="delscene">Delete scene</button></div></div>`;
 }
 /* power */
@@ -1589,6 +1591,7 @@ function panelClick(e){
   else if(act==='copygear'){const t=gearText(V.gearScope);navigator.clipboard.writeText(t).then(()=>toast('Gear list copied'),()=>showText('Gear list',t));}
   else if(act==='csvgear')saveFile(`gear-${slug(V.gearScope==='project'?P.title:'scene-'+scene().num)}.csv`,gearCSV(V.gearScope));
   else if(act==='dupshot'){snap();const su=setup(),sh=shot();const n=clone(sh);n.id=rid();n.num=nextShotNum(scene());reId(n.items);su.shots.splice(su.shots.indexOf(sh)+1,0,n);V.shotId=n.id;changed();toast('Shot duplicated');}
+  else if(act==='turnsetup'){makeTurnaround();}
   else if(act==='dupsetup'){snap();const sc=scene(),su=setup();const n=clone(su);n.id=rid();n.name=su.name+' (copy)';reIdAll([n.items].concat(n.shots.map(s=>s.items)));n.shots.forEach(s=>{s.id=rid();s.num='';});
     sc.setups.push(n);n.shots.forEach(s=>{s.num=nextShotNum(sc);});V.setupId=n.id;V.shotId=n.shots[0].id;changed();toast('Setup duplicated');}
   else if(act==='delshot')confirmBox(`Delete shot ${shot().num}?`,'Its cameras, moves and any items set to "This shot only" go with it. You can undo this.',()=>{const su=setup();if(su.shots.length===1){toast('A setup needs at least one shot. Delete the setup instead.');return;}snap();su.shots=su.shots.filter(s=>s.id!==shot().id);V.shotId=null;fixView();V.sel=null;changed();});
@@ -1703,7 +1706,7 @@ $('#bProjects').onclick=async()=>{openModal('<h3>Projects</h3><div class="empty"
 };
 $('#bHelp').onclick=()=>openModal(`<h3>How to use it</h3>
 <div style="font-size:12.5px;color:#c9ced5;line-height:1.55;margin-bottom:12px">
-<b>1. Break it down.</b> Open the library panel (top-left button or <b>[</b>) to add scenes, setups and shots, or import your shot list from the <b>Shot list</b> button. A new setup carries over the walls, set pieces, actors and power, but not the lights.<br>
+<b>1. Break it down.</b> Open the library panel (top-left button or <b>[</b>) to add scenes, setups and shots, or import your shot list from the <b>Shot list</b> button. A new setup carries over the walls, set pieces, actors and power, but not the lights. For the reverse angle, use <b>Make turnaround</b> (Shot tab ▸ Manage): it copies the room, actors and lights without the camera and marks the setup <b>↺ turn</b>. You can also set any setup’s <b>Build</b> to New lighting or Turnaround. Your Shotlist Sequencer’s Shot List MASTER can be pasted straight into <b>Shot list ▸ Import a shot list</b>.<br>
 <b>2. Build the room.</b> Press <b>B</b> and drag out a room — its size shows as you drag — or click once to type exact dimensions. For odd shapes use <b>W</b>: walls stay straight on their own, each wall shows its length, and you can type a length and press Enter. Each side of a room is its own wall: tap one to change or delete just that side, or double-click to select the whole room. Start a wall on another wall and they join. With a wall selected, <b>Add corner</b> bends it and <b>Cut gap</b> removes a stretch. Doors and windows make their own opening and move with the wall. <b>Floor plan</b> (bottom bar) puts an image or PDF under the grid to trace over, and <b>Lock walls</b> keeps them still once the room is right.<br>
 <b>3. Furnish and light it.</b> Pick anything from the library and click to drop it. Furniture sits flush only when you drop it within a few inches of a wall (hold <kbd>Option</kbd>/<kbd>Alt</kbd> while dragging to place it freely), and wall-mounted pieces (TV, mirror, shelf) attach to the wall and move with it. Drop a camera on a dolly and they move as one; a dolly dropped on track lines up with it. The bar above the plan shows the selected item's size, angle and the settings you change most; <b>More…</b> opens everything.<br>
 <b>4. Block it.</b> Select an actor or camera and press <b>Draw move</b>. To add more stops later, select the move and press <b>Continue</b>. The path stays attached: move the actor or camera and the path follows; drag the path and the whole move goes together. Points snap to actors, marks, cameras and dolly track.<br>
@@ -1765,13 +1768,13 @@ function linkScript(){const view=$('#scriptView');const s=window.getSelection();
 document.addEventListener('mousedown',e=>{if(e.target.closest&&e.target.closest('#bLinkScript'))e.preventDefault();});
 
 function shotRowsCSV(){const q=s=>'"'+String(s??'').replace(/"/g,'""')+'"';
-  return 'Scene,Heading,Setup,Shot,Size,Angle,Movement,Lens,Support,Description,Blocking,Cast,Lights,Watts,Status,Script,Notes\n'+allShots().map(({sc,su,sh})=>{const items=activeItems(su,sh);const cams=sh.items.filter(i=>i.t==='camera');
-    return [sc.num,sceneHeading(sc),su.name,sh.num,sh.size,sh.angle,sh.move,cams.map(lensLabel).join(' / '),cams.map(c=>c.support).join(' / '),sh.desc,sh.blocking,[...new Set(items.filter(i=>i.t==='actor').map(a=>a.label))].join(', '),items.filter(i=>LIB[i.t]&&LIB[i.t].kind==='light').length,powerFor(items).total,shStatus(sh),coverText(sh),sh.notes].map(q).join(',');}).join('\n');}
+  return 'Scene,Heading,Setup,Build,Shot,Size,Angle,Movement,Lens,Support,Description,Blocking,Cast,Lights,Watts,Status,Script,Notes\n'+allShots().map(({sc,su,sh})=>{const items=activeItems(su,sh);const cams=sh.items.filter(i=>i.t==='camera');
+    return [sc.num,sceneHeading(sc),su.name,buildLabel(su),sh.num,sh.size,sh.angle,sh.move,cams.map(lensLabel).join(' / '),cams.map(c=>c.support).join(' / '),sh.desc,sh.blocking,[...new Set(items.filter(i=>i.t==='actor').map(a=>a.label))].join(', '),items.filter(i=>LIB[i.t]&&LIB[i.t].kind==='light').length,powerFor(items).total,shStatus(sh),coverText(sh),sh.notes].map(q).join(',');}).join('\n');}
 function openShotList(){
   const rows=allShots();const done=rows.filter(r=>shStatus(r.sh)!=='To plan').length;const cur=shot().id;
   const body=rows.map(({sc,su,sh})=>{const items=activeItems(su,sh);const cams=sh.items.filter(i=>i.t==='camera');const cast=[...new Set(items.filter(i=>i.t==='actor').map(a=>a.label))].join(', ');const st=shStatus(sh);
     const inp2=(k,w)=>`<input class="in" data-sl="${sh.id}" data-k="${k}" value="${esc(sh[k]||'')}" style="width:${w}px">`;const sel2=(k,list,val,w)=>`<select class="in" data-sl="${sh.id}" data-k="${k}" style="width:${w}px">${optList(list,val)}</select>`;
-    return `<tr class="${sh.id===cur?'cur':''}"><td><span class="sNum">${esc(sc.num)}</span></td><td>${esc(su.name)}</td><td>${inp2('num',52)}</td><td>${sel2('size',SIZES,sh.size,74)}</td><td>${sel2('angle',ANGLES,sh.angle,100)}</td><td>${sel2('move',MOVES,sh.move,100)}</td><td class="n" style="text-align:left">${esc(cams.map(lensLabel).join(' / ')||'—')}</td><td>${inp2('desc',230)}</td><td>${esc(cast||'—')}</td><td class="n">${items.filter(i=>LIB[i.t]&&LIB[i.t].kind==='light').length}</td><td class="n">${fmtW(powerFor(items).total)}</td><td style="text-align:center;color:${(sh.cover||[]).length?'var(--green)':'var(--dim)'}">${(sh.cover||[]).length?'✓':'—'}</td><td>${sel2('status',STATUSES,st,104)}</td><td><button class="btn sm" data-goto="${sh.id}">Open</button></td></tr>`;}).join('');
+    return `<tr class="${sh.id===cur?'cur':''}"><td><span class="sNum">${esc(sc.num)}</span></td><td>${esc(su.name)}${isTurn(su)?' <span class="turnTag">↺ turn</span>':''}</td><td>${inp2('num',52)}</td><td>${sel2('size',SIZES,sh.size,74)}</td><td>${sel2('angle',ANGLES,sh.angle,100)}</td><td>${sel2('move',MOVES,sh.move,100)}</td><td class="n" style="text-align:left">${esc(cams.map(lensLabel).join(' / ')||'—')}</td><td>${inp2('desc',230)}</td><td>${esc(cast||'—')}</td><td class="n">${items.filter(i=>LIB[i.t]&&LIB[i.t].kind==='light').length}</td><td class="n">${fmtW(powerFor(items).total)}</td><td style="text-align:center;color:${(sh.cover||[]).length?'var(--green)':'var(--dim)'}">${(sh.cover||[]).length?'✓':'—'}</td><td>${sel2('status',STATUSES,st,104)}</td><td><button class="btn sm" data-goto="${sh.id}">Open</button></td></tr>`;}).join('');
   openModal(`<h3>Shot list</h3><div class="pSub">${rows.length} shot${rows.length===1?'':'s'} · ${done} diagrammed or further along. Edit any cell here; <b>Open</b> jumps to that shot's diagram. Lens, cast, lights and power come from what's on the plan.</div>
    <div class="slWrap"><table class="t"><tr><th>Sc</th><th>Setup</th><th>Shot</th><th>Size</th><th>Angle</th><th>Move</th><th>Lens</th><th>Description</th><th>Cast</th><th style="text-align:right">Lights</th><th style="text-align:right">Power</th><th>Script</th><th>Status</th><th></th></tr>${body}</table></div>
    <div class="mFoot" style="justify-content:space-between"><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" id="slImport">Import a shot list…</button><button class="btn" id="slSD">Import from Script Desk…</button><button class="btn" id="slCSV">Download CSV</button><button class="btn" id="slCopy">Copy for a spreadsheet</button></div><button class="btn pri" data-close>Done</button></div>`,'wide');
@@ -1799,10 +1802,10 @@ function importShotList(txt){const rows=parseDelimited(txt);if(rows.length<2)ret
     sh._imp=1;if(g('size'))sh.size=pick(SIZES,g('size'));if(g('angle'))sh.angle=pick(ANGLES,g('angle'));if(g('move'))sh.move=pick(MOVES,g('move'));if(g('desc'))sh.desc=g('desc');
     const nt=[g('notes'),g('lens')?'Lens: '+g('lens'):''].filter(Boolean).join(' · ');if(nt)sh.notes=nt;});
   P.scenes.forEach(sc=>sc.setups.forEach(su=>{delete su._imp;su.shots.forEach(sh=>delete sh._imp);}));normalize(P);fixView();changed();return {added,updated};}
-function openShotImport(){openModal(`<h3>Import a shot list</h3><div class="pSub">Copy the rows from Google Sheets, Excel or a CSV (including the header row) and paste them below. Columns it understands: <b>Scene, Setup, Shot, Size, Angle, Movement, Lens, Description, Notes</b>. Shots that already exist are updated; new ones are added with an empty diagram ready to draw.</div>
+function openShotImport(){openModal(`<h3>Import a shot list</h3><div class="pSub">Copy the rows from Google Sheets, Excel or a CSV (including the header row) and paste them below. Columns it understands: <b>Scene, Setup, Shot, Size, Angle, Movement, Lens, Description, Notes</b>. It also reads your <b>Shotlist Sequencer</b>: copy the Shot List MASTER tab (title rows are fine). Its Light letters become setups, the Lighting Key’s Build marks turnarounds, Scheduled On fills the shooting days, and its shot types and moves are translated. Shots that already exist are updated; new ones are added with an empty diagram ready to draw.</div>
   <textarea class="in" id="slPaste" style="height:240px;font:12px var(--mono)" placeholder="Scene&#9;Shot&#9;Size&#9;Movement&#9;Description&#10;1&#9;1A&#9;WS&#9;Static&#9;Master — Maya enters&#10;1&#9;1B&#9;MCU&#9;Push in&#9;Jonah stands"></textarea>
   <div class="mFoot"><button class="btn" id="slBack">Back</button><button class="btn pri" id="slGo">Import</button></div>`);
-  $('#slBack').onclick=openShotList;$('#slGo').onclick=()=>{const r=importShotList($('#slPaste').value);if(r.err){toast(r.err);return;}toast(`${r.added} shot${r.added===1?'':'s'} added, ${r.updated} updated`);openShotList();};}
+  $('#slBack').onclick=openShotList;$('#slGo').onclick=()=>{const r=importShotList($('#slPaste').value);if(r.err){toast(r.err);return;}toast(`${r.added} shot${r.added===1?'':'s'} added, ${r.updated} updated${r.setups?`, ${r.setups} new setup${r.setups===1?'':'s'}`:''}`);openShotList();};}
 /* ---- link from Script Desk: scenes, sides and setups in one file ---- */
 const sdHash=t=>{let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return h+':'+t.length;};
 function applyScriptDesk(o,withText){const IE={'INT':'INT.','EXT':'EXT.','INT/EXT':'INT./EXT.','EXT/INT':'INT./EXT.','EST':'EXT.','INT.':'INT.','EXT.':'EXT.','INT./EXT.':'INT./EXT.'};let scN=0,scU=0,shN=0,shU=0,linked=0;
@@ -2564,7 +2567,7 @@ function openOrganize(scId){const sc=P.scenes.find(s=>s.id===scId)||scene();snap
       <div class="pSub">A <b>setup</b> is one lighting arrangement; every shot inside it shares those lights. Drag shots between setups, or tick several and move them together. Shots keep their camera, blocking and script lines when they move.</div>
       <div style="display:flex;gap:8px;align-items:center;margin:8px 0"><label class="pSub" style="margin:0">Scene</label><select class="in" id="orgSc" style="flex:1">${P.scenes.map(s=>`<option value="${s.id}" ${s.id===sc.id?'selected':''}>${esc(s.num)} · ${esc(sceneHeading(s))}</option>`).join('')}</select></div>
       <div class="orgGrid">${sc.setups.map(su=>{const nl=su.items.filter(i=>LIB[i.t]&&LIB[i.t].kind==='light').length;return `<div class="orgSu" data-drop="${su.id}">
-        <div class="orgHead"><input class="in" data-rn="${su.id}" value="${esc(su.name)}" aria-label="Setup name"><span class="pSub" style="margin:0;white-space:nowrap">${su.shots.length} shot${su.shots.length===1?'':'s'} · ${nl} light${nl===1?'':'s'}</span>${!su.shots.length&&!nl?`<button class="btn sm" data-rmsu="${su.id}" title="Remove this empty setup">✕</button>`:''}</div>
+        <div class="orgHead"><input class="in" data-rn="${su.id}" value="${esc(su.name)}" aria-label="Setup name"><span class="pSub" style="margin:0;white-space:nowrap">${su.shots.length} shot${su.shots.length===1?'':'s'} · ${nl} light${nl===1?'':'s'}${isTurn(su)?' · ↺ '+esc(buildLabel(su)):''}</span>${!su.shots.length&&!nl?`<button class="btn sm" data-rmsu="${su.id}" title="Remove this empty setup">✕</button>`:''}</div>
         <div class="orgShots">${su.shots.map(s=>`<label class="orgShot ${sel.has(s.id)?'on':''}" draggable="true" data-drag="${s.id}"><input type="checkbox" data-pick="${s.id}" ${sel.has(s.id)?'checked':''}><b>${esc(s.num)}</b><span>${esc([s.size,s.desc].filter(Boolean).join(' — ')||'—')}</span></label>`).join('')||'<div class="pSub" style="padding:8px">Drop shots here</div>'}</div></div>`;}).join('')}
         <div class="orgSu orgNew" data-drop="__new"><div class="pSub" style="padding:14px;text-align:center">＋ Drop shots here for a <b>new setup</b><br><small>Walls, set, actors and power are copied; lights start empty.</small></div></div></div>
       <div class="mFoot" style="display:flex;flex-direction:row;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-top:10px"><div style="display:flex;flex-direction:row;gap:6px;align-items:center;flex-wrap:wrap"><span class="pSub" style="margin:0">${sel.size} selected →</span><select class="in" id="orgTo" style="width:auto">${sc.setups.map(su=>`<option value="${su.id}">${esc(su.name)}</option>`).join('')}<option value="__new">New setup</option></select><button class="btn" id="orgMove" ${sel.size?'':'disabled'}>Move</button></div><button class="btn pri" id="orgDone">Done</button></div>`;};
@@ -2700,6 +2703,80 @@ function openDays(){const D=daysList();snap();
 // day chip in the breakdown, next to each scene
 {const _rt=renderTree;renderTree=function(){_rt();if(!daysList().length)return;$('#tree').querySelectorAll('[data-scene]').forEach(r=>{const sc=P.scenes.find(s=>s.id===r.dataset.scene);if(!sc)return;const ds=new Set();sc.setups.forEach(su=>su.shots.forEach(sh=>sh.day&&ds.add(sh.day)));if(!ds.size)return;
   const names=[...ds].map(id=>dayById(id)).filter(Boolean).map(d=>d.name||'Day');if(names.length)r.insertAdjacentHTML('beforeend',`<span class="dayChip" title="${esc([...ds].map(id=>dayLabel(dayById(id))).join(', '))}">${esc(names.length>1?names[0]+' +'+(names.length-1):names[0])}</span>`);});};}
+/* ============================================================
+   Turnarounds: a setup is either new lighting or a turnaround of another setup
+   su.build: '' = new lighting · 'turn' = turnaround · 'turn:<setupId>' = turnaround of that setup
+   ============================================================ */
+function suById(id){for(const sc of P.scenes)for(const su of sc.setups)if(su.id===id)return su;return null;}
+function isTurn(su){return !!(su&&su.build&&String(su.build).startsWith('turn'));}
+function turnSrc(su){if(!isTurn(su))return null;const id=String(su.build).split(':')[1];return id?suById(id):null;}
+function buildLabel(su){if(!isTurn(su))return 'New lighting';const s=turnSrc(su);return s?'Turnaround of '+s.name:'Turnaround';}
+const turnTag=su=>isTurn(su)?' · '+buildLabel(su):'';
+function buildField(sc,su){const others=sc.setups.filter(x=>x.id!==su.id);let v=su.build||'';if(isTurn(su)&&v.includes(':')&&!turnSrc(su))v='turn';
+  const opts=[['','New lighting'],['turn','Turnaround']].concat(others.map(o=>['turn:'+o.id,'Turnaround of '+o.name]));
+  return `<div class="f"><label>Build</label><select class="in" data-o="setup" data-k="build">${opts.map(([k,l])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(l)}</option>`).join('')}</select></div>`;}
+// new setup facing the other way: same room, actors, lights and grip as a starting point; no cameras
+function makeTurnaround(){snap();const sc=scene(),src=setup();const su=newSetupFrom(sc,null);
+  su.items=clone(src.items.filter(i=>i.t!=='camera'));reId(su.items);su.build='turn:'+src.id;
+  const sh=mkShot(nextShotNum(sc));su.shots.push(sh);normalize(P);changed();gotoShot(sh.id);
+  toast(`${su.name} is a turnaround of ${src.name}. Room, actors and lights are copied: move whatever is now in frame, then place the camera.`,6000);}
+
+/* ---- Shotlist Sequencer → Shot Plot: understand its columns and words ---- */
+const SEQ_SIZE={'ews':'EWS','establishing':'EWS','wide':'WS','wide zoom':'WS','master':'WS','full shot':'FS','mw':'MWS','mw zoom':'MWS','cowboy':'MWS','medium':'MS','three shot / group':'MS','two shot':'2-Shot',
+  'mcu':'MCU','mcu zoom':'MCU','single':'MCU','clean single':'MCU','dirty single':'OTS','reverse':'OTS','ots':'OTS','cu':'CU','cu zoom':'CU','reaction':'CU','ecu':'ECU','insert':'Insert','cutaway':'Insert','pov':'POV',
+  'ws':'WS','fs':'FS','mws':'MWS','ms':'MS','2-shot':'2-Shot'};
+const SEQ_ANGLE={'overhead':'Overhead','high angle':'High','low angle':'Low','dutch':'Dutch'};
+const SEQ_MOVE={'static':'Static','tracking':'Dolly / track','truck':'Dolly / track','follow':'Dolly / track','lead':'Dolly / track','dolly in':'Push in','push in':'Push in','dolly out':'Pull out','pull out':'Pull out','arc':'Arc',
+  'pan':'Pan','tilt':'Tilt','pan & tilt':'Pan','whip pan':'Whip pan','boom up':'Crane / jib','boom down':'Crane / jib','crane up':'Crane / jib','crane down':'Crane / jib','zoom in':'Zoom','zoom out':'Zoom','dolly zoom':'Zoom',
+  'handheld float':'Handheld','handheld':'Handheld','steadicam':'Steadicam / gimbal','gimbal':'Steadicam / gimbal'};
+const SEQ_RIG={'sticks':'Sticks (tripod)','baby legs':'Baby legs (100mm)','hi-hat':'Hi-hat','handheld':'Handheld','shoulder rig':'Shoulder','easy rig':'Shoulder','ground / sandbag':'Hi-hat','apple box':'Hi-hat',
+  'dolly (track)':'Dolly','doorway dolly':'Dolly','wheelchair dolly':'Dolly','slider':'Slider','gimbal':'Gimbal','steadicam':'Steadicam','jib':'Jib / crane','crane':'Jib / crane'};
+// words that mean the same thing in both tools; anything else that gets translated keeps its original word in Notes
+const SEQ_SAME=new Set(['wide','full shot','mw','medium','two shot','tracking','dolly in','dolly out','push in','pull out','pan','tilt','whip pan','arc','handheld','static','steadicam','gimbal']);
+// returns [value for the Shot Plot list, true if nothing is lost]
+function seqWord(map,list,v){const k=String(v||'').trim().toLowerCase();if(!k)return ['',true];const ex=list.find(o=>o.toLowerCase()===k);if(ex)return [ex,true];return map[k]?[map[k],SEQ_SAME.has(k)]:['',false];}
+
+/* the import itself: finds the header row anywhere (the Sequencer has title rows above it) */
+{const _imp=importShotList;importShotList=function(txt){
+  const rows=parseDelimited(txt);const isHead=r=>{const h=r.map(x=>String(x).trim().toLowerCase());return h.some(x=>/^(scene|sc)\b/.test(x))&&h.some(x=>/^shot\b|desc/.test(x));};
+  const hi=rows.findIndex(isHead);if(hi<0)return _imp(txt);
+  const hd=rows[hi].map(h=>String(h).trim().toLowerCase());
+  // only the Sequencer has Type / Mvmt / Rig / Light / Scheduled On; anything else goes through the original import
+  if(!hd.some(h=>/^(type|mvmt|rig|light|scheduled on)$/.test(h)))return _imp(rows.slice(hi).map(r=>r.map(c=>/[\t,"\n]/.test(c)?'"'+String(c).replace(/"/g,'""')+'"':c).join('\t')).join('\n'));
+  const first=re=>hd.findIndex(h=>re.test(h)),last=re=>{for(let i=hd.length-1;i>=0;i--)if(re.test(hd[i]))return i;return -1;};
+  const ix={scene:first(/^(scene|sc)$/),shot:first(/^shot$/),shotId:first(/^shot id$/),slug:first(/^slug/),dn:first(/^d\/n$/),type:first(/^(type|size)$/),lens:first(/^lens/),rig:first(/^rig/),mvmt:first(/^(mvmt|movement)$/),
+    desc:first(/desc/),light:first(/^light$/),notes:first(/note/),day:first(/^scheduled on$/),build:first(/^build$/),keyLight:last(/^light$/),keyNote:last(/^note$/)};
+  if(ix.keyLight===ix.light)ix.keyLight=-1;
+  snap();let added=0,updated=0,setups=0;const blank=sh=>!sh.desc&&!sh.items.length&&!sh.notes&&!(sh.cover||[]).length&&!sh._imp;
+  const key={};const touched=new Map();
+  rows.slice(hi+1).forEach(r=>{const g=k=>ix[k]>=0?String(r[ix[k]]||'').trim():'';
+    if(ix.keyLight>=0&&g('keyLight'))key[g('keyLight').toUpperCase()]={build:g('build'),note:ix.keyNote>=0&&ix.keyNote!==ix.notes?g('keyNote'):''};
+    const scNum=g('scene').replace(/^sc(ene)?\.?\s*/i,'');const shotRaw=g('shot')||g('shotId');const desc=g('desc');
+    if(!scNum||(!shotRaw&&!desc))return;
+    let sc=P.scenes.find(s=>String(s.num).toLowerCase()===scNum.toLowerCase());
+    if(!sc){sc=mkScene(scNum);P.scenes.push(sc);const sl=g('slug');const m=sl.match(/^\s*(INT\.?\s*\/\s*EXT\.?|EXT\.?\s*\/\s*INT\.?|INT\.?|EXT\.?)\s*(.*)$/i);
+      if(m){sc.ie=/\//.test(m[1])?'INT./EXT.':/^INT/i.test(m[1])?'INT.':'EXT.';if(m[2])sc.loc=m[2].replace(/\s*[-–—]\s*(DAY|NIGHT).*$/i,'').trim().toUpperCase();}else if(sl)sc.loc=sl.toUpperCase();
+      const dn=g('dn');if(dn)sc.tod=/^n/i.test(dn)?'NIGHT':/^d/i.test(dn)?'DAY':dn.toUpperCase();}
+    let su=sc.setups[0];const L=g('light').toUpperCase();
+    if(L){const nm='Setup '+L;su=sc.setups.find(s=>s.name.toLowerCase()===nm.toLowerCase()||s.name.toLowerCase().startsWith(nm.toLowerCase()+' '));
+      if(!su){const f=sc.setups[0];if(sc.setups.length===1&&!f.items.length&&f.shots.every(blank)&&f.name==='Setup A'&&!f._imp){su=f;su.name=nm;}else{su=mkSetup(nm);sc.setups.push(su);setups++;}}su._imp=1;touched.set(su,L);}
+    let num=g('shotId')||shotRaw;if(/^[a-z]{1,2}$/i.test(num))num=sc.num+num.toUpperCase();
+    let sh=null;if(num)sc.setups.forEach(s=>s.shots.forEach(x=>{if(String(x.num).toLowerCase()===num.toLowerCase())sh=x;}));
+    if(sh){updated++;if(L&&!su.shots.includes(sh)){sc.setups.forEach(s=>{s.shots=s.shots.filter(x=>x!==sh);});su.shots.push(sh);}}
+    else{sh=su.shots.find(blank);if(sh){if(num)sh.num=num;}else{sh=mkShot(num||nextShotNum(sc));su.shots.push(sh);}added++;}
+    sh._imp=1;const extra=[];
+    const t=g('type');if(t){const [z,ok]=seqWord(SEQ_SIZE,SIZES,t);const a=SEQ_ANGLE[t.toLowerCase()];if(z)sh.size=z;if(a)sh.angle=a;if((!ok&&!a)||(!z&&!a))extra.push('Type: '+t);}
+    const mv=g('mvmt');if(mv){const [z,ok]=seqWord(SEQ_MOVE,MOVES,mv);if(z)sh.move=z;if(!ok)extra.push('Move: '+mv);}
+    const rg=g('rig');if(rg){const [z]=seqWord(SEQ_RIG,SUPPORTS,rg);const cams=sh.items.filter(i=>i.t==='camera');if(z&&cams.length)cams.forEach(c=>c.support=z);else extra.push('Rig: '+rg);}
+    if(g('lens'))extra.push('Lens: '+g('lens'));if(desc)sh.desc=desc;
+    const nt=[g('notes'),...extra].filter(Boolean).join(' · ');if(nt)sh.notes=nt;
+    const d=g('day');if(d&&typeof daysList==='function'){const D=daysList();const n=(d.match(/\d+/)||[])[0];let day=D.find(x=>(x.name||'').toLowerCase()===d.toLowerCase())||(n&&/^day\s*\d+$/i.test(d)?D.find(x=>(x.name||'').toLowerCase()==='day '+n):null);
+      if(!day){day={id:rid(),name:/^\d+$/.test(d)?'Day '+d:d,date:'',note:''};D.push(day);}sh.day=day.id;}});
+  // Lighting Key: Build (New lighting / Turnaround) and its note
+  touched.forEach((L,su)=>{const k=key[L];if(!k)return;if(/turn/i.test(k.build))su.build=su.build&&isTurn(su)?su.build:'turn';else if(/new/i.test(k.build))su.build='';if(k.note&&!su.notes)su.notes=k.note;});
+  P.scenes.forEach(sc=>sc.setups.forEach(su=>{delete su._imp;su.shots.forEach(sh=>delete sh._imp);}));
+  P.scenes.forEach(sc=>{sc.setups=sc.setups.filter(su=>su.shots.length||su.items.length||su.notes);if(!sc.setups.length){const su=mkSetup('Setup A');su.shots.push(mkShot(nextShotNum(sc)));sc.setups.push(su);}});
+  normalize(P);fixView();changed();return {added,updated,setups,seq:true};};}
 const BRANDFF=(()=>{let o='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.type===5&&/EB Garamond|Lato/.test(r.cssText))o+=r.cssText;}catch(e){}}return o;})();
 /* ============================================================
    Export
@@ -2737,7 +2814,7 @@ function buildSheet0(sc,su,sh,X){
   const txt=(x,y,s,o)=>`<text x="${x}" y="${y}" font-family="${o&&o.mono?M:o&&o.gar?G:F}" font-size="${(o&&o.size)||13}" font-weight="${o&&o.gar?500:(o&&o.w)||400}" fill="${(o&&o.c)||T.ink}" ${o&&o.anchor?`text-anchor="${o.anchor}"`:''}>${esc(s)}</text>`;
   let head='';
   if(X.header)head=`<rect x="0" y="0" width="${Wd}" height="${creditLine()?100:86}" fill="${T.head}"/>`+txt(30,38,fitTitle(P.title).t,{size:fitTitle(P.title).s,gar:1,c:'#fff'})+(creditLine()?txt(30,90,creditLine(),{size:13,c:'#ffffff'}):'')+`<text x="30" y="65" font-size="15" fill="#f0935a"><tspan font-family="${G}" font-weight="500" font-size="17">Scene ${esc(sc.num)}</tspan><tspan font-family="${M}" font-size="13" dx="12">${esc(sceneHeading(sc))}</tspan></text>`
-     +txt(Wd-30,38,sh._setup?su.name:`Shot ${sh.num}`,{size:30,gar:1,c:'#fff',anchor:'end'})+txt(Wd-30,64,sh._setup?`Setup page · ${su.shots.length} shot${su.shots.length===1?'':'s'} · ${new Date().toLocaleDateString()}`:`${su.name} · ${new Date().toLocaleDateString()}`,{size:13,c:'#ffffff',anchor:'end'})+(X._pg?txt(Wd/2,74,X._pg,{size:12,c:'#ffffff',anchor:'middle'}):'');
+     +txt(Wd-30,38,sh._setup?su.name:`Shot ${sh.num}`,{size:30,gar:1,c:'#fff',anchor:'end'})+txt(Wd-30,64,sh._setup?`Setup page${turnTag(su)} · ${su.shots.length} shot${su.shots.length===1?'':'s'} · ${new Date().toLocaleDateString()}`:`${su.name}${turnTag(su)} · ${new Date().toLocaleDateString()}`,{size:13,c:'#ffffff',anchor:'end'})+(X._pg?txt(Wd/2,74,X._pg,{size:12,c:'#ffffff',anchor:'middle'}):'');
   let frame=`<rect x="${DX}" y="${DY}" width="${DW}" height="${DH}" fill="none" stroke="${T.rule}"/>`;
   frame+=txt(DX+262,DY+DH+21,[X.grid?'Grid: 1 square = 1 ft · bold lines every 5 ft':'',sh._setup?'Every camera position in this setup, labelled by shot':X.ghost&&su.shots.length>1?`faded cameras = other shots in ${su.name}`:'',!X.header?`${P.title} · Sc ${sc.num} · ${sh._setup?su.name:'Shot '+sh.num}${X._pg?' · '+X._pg:''}`:''].filter(Boolean).join(' · '),{size:11,c:T.sub});
   frame+=txt(DX+262,DY+DH+39,'Planning reference for placement only. Not an exact representation of the lighting or framing on set.',{size:12,c:T.sub});
@@ -2841,7 +2918,7 @@ function contentsSVG(X,plan,part){const {pages,rows}=plan;const total=pages.leng
   const links=[];let y=198;const cut=(s,n)=>!s?'':s.length>n?s.slice(0,n-1)+'…':s;
   lines.slice(part*CT_ROWS,(part+1)*CT_ROWS).forEach(l=>{
     if(l.scene){g+=txt(30,y+6,`SCENE ${l.scene.num}`,{size:13,w:700})+txt(150,y+6,cut(sceneHeading(l.scene),80),{size:12.5,mono:1,c:T.sub})+`<line x1="20" y1="${y+14}" x2="1630" y2="${y+14}" stroke="${T.rule}"/>`;y+=32;return;}
-    if(l.kind==='setup'){g+=`<rect x="20" y="${y-17}" width="1610" height="25" fill="${T.band}" opacity=".6"/>`+txt(70,y,l.no,{size:13,w:700,anchor:'end'})+txt(100,y,l.sc.num,{size:12.5})+txt(150,y,cut(l.su.name,22),{size:12.5,w:700})+txt(330,y,`Setup page — all cameras, light key, power & gear · ${l.su.shots.length} shot${l.su.shots.length===1?'':'s'}`,{size:15,gar:1,it:1});}
+    if(l.kind==='setup'){g+=`<rect x="20" y="${y-17}" width="1610" height="25" fill="${T.band}" opacity=".6"/>`+txt(70,y,l.no,{size:13,w:700,anchor:'end'})+txt(100,y,l.sc.num,{size:12.5})+txt(150,y,cut(l.su.name,22),{size:12.5,w:700})+txt(330,y,`${isTurn(l.su)?buildLabel(l.su)+' · ':''}Setup page — all cameras, light key, power & gear · ${l.su.shots.length} shot${l.su.shots.length===1?'':'s'}`,{size:15,gar:1,it:1});}
     else{const sh=l.sh;const cams=sh.items.filter(i=>i.t==='camera');const cast=[...new Set(activeItems(l.su,sh).filter(i=>i.t==='actor').map(a=>a.label))].join(', ');
       g+=txt(70,y,l.no,{size:13,w:700,anchor:'end'})+txt(100,y,l.sc.num,{size:12.5})+txt(150,y,cut(l.su.name,22),{size:12.5,c:T.sub})+txt(330,y,sh.num,{size:13,w:700})+txt(410,y,cut([sh.size,sh.angle].filter(Boolean).join(' · '),26),{size:12.5})
         +txt(620,y,cut(sh.move,20),{size:12.5})+txt(780,y,cut(cams.map(lensLabel).join(' / ')||'—',20),{size:12.5})+txt(930,y,cut(sh.desc,62),{size:12.5})+txt(1400,y,cut(cast,30),{size:12.5,c:T.sub});}
