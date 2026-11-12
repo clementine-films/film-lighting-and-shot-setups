@@ -2652,7 +2652,7 @@ function sheetItems(su,sh,X){return activeItems(su,sh).filter(it=>{if(it.t==='li
 function buildSheet(sc,su,sh,X){window.__expSu=su;window.__expSc=sc;try{return buildSheet0(sc,su,sh,X);}finally{window.__expSu=null;window.__expSc=null;}}
 function buildSheet0(sc,su,sh,X){
   X=X||xo();const dark=X.theme==='dark';const C=dark?THEMES.dark:THEMES.paper;
-  const T=dark?{bg:'#15171a',ink:'#e3e6ea',sub:'#8d949e',band:'#23272c',rule:'#3a3f46',head:'#0c0d0f',off:'#5f6670',track:'#2a2e34'}:{bg:'#ffffff',ink:'#1d2024',sub:'#6b7280',band:'#f1f3f5',rule:'#c9ced5',head:'#16181b',off:'#9ca3af',track:'#eef0f3'};
+  const T=dark?{bg:'#15171a',ink:'#e3e6ea',sub:'#e3e6ea',band:'#23272c',rule:'#3a3f46',head:'#0c0d0f',off:'#5f6670',track:'#2a2e34'}:{bg:'#ffffff',ink:'#1d2024',sub:'#1d2024',band:'#f1f3f5',rule:'#c9ced5',head:'#16181b',off:'#9ca3af',track:'#eef0f3'};
   const Wd=1650,Ht=1275;const items=sheetItems(su,sh,X);const nums=lightNumbers(items);
   const hasShot=X.f_size||X.f_move||X.f_cam||X.f_cast||X.f_desc||X.f_blocking||X.f_intent||X.f_notes;
   const side=X.layout==='sheet'&&(sh._setup||hasShot||X.f_scene||X.f_script||X.lightKey||X.powerBlock||X.legend);
@@ -2670,7 +2670,7 @@ function buildSheet0(sc,su,sh,X){
   const txt=(x,y,s,o)=>`<text x="${x}" y="${y}" font-family="${o&&o.mono?M:o&&o.gar?G:F}" font-size="${(o&&o.size)||13}" font-weight="${o&&o.gar?500:(o&&o.w)||400}" fill="${(o&&o.c)||T.ink}" ${o&&o.anchor?`text-anchor="${o.anchor}"`:''}>${esc(s)}</text>`;
   let head='';
   if(X.header)head=`<rect x="0" y="0" width="${Wd}" height="86" fill="${T.head}"/>`+txt(30,38,P.title,{size:28,gar:1,c:'#fff'})+`<text x="30" y="65" font-size="15" fill="#f0935a"><tspan font-family="${G}" font-weight="500" font-size="17">Lighting plot · Scene ${esc(sc.num)}</tspan><tspan font-family="${M}" font-size="13" dx="12">${esc(sceneHeading(sc))}</tspan></text>`+`<text x="${Wd/2}" y="50" text-anchor="middle" font-family="'EB Garamond',Garamond,Georgia,serif" font-style="italic" font-size="22" fill="#f3e9d7">Clementine Films</text>`
-     +txt(Wd-30,38,sh._setup?su.name:`Shot ${sh.num}`,{size:30,gar:1,c:'#fff',anchor:'end'})+txt(Wd-30,64,sh._setup?`Setup page · ${su.shots.length} shot${su.shots.length===1?'':'s'} · ${new Date().toLocaleDateString()}`:`${su.name} · ${new Date().toLocaleDateString()}`,{size:13,c:'#aab1bb',anchor:'end'})+(X._pg?txt(Wd/2,74,X._pg,{size:12,c:'#aab1bb',anchor:'middle'}):'');
+     +txt(Wd-30,38,sh._setup?su.name:`Shot ${sh.num}`,{size:30,gar:1,c:'#fff',anchor:'end'})+txt(Wd-30,64,sh._setup?`Setup page · ${su.shots.length} shot${su.shots.length===1?'':'s'} · ${new Date().toLocaleDateString()}`:`${su.name} · ${new Date().toLocaleDateString()}`,{size:13,c:'#ffffff',anchor:'end'})+(X._pg?txt(Wd/2,74,X._pg,{size:12,c:'#ffffff',anchor:'middle'}):'');
   let frame=`<rect x="${DX}" y="${DY}" width="${DW}" height="${DH}" fill="none" stroke="${T.rule}"/>`;
   frame+=txt(DX+8,DY+DH+21,[X.grid?'Grid: 1 square = 1 ft · bold lines every 5 ft':'',sh._setup?'Every camera position in this setup, labelled by shot':X.ghost&&su.shots.length>1?`faded cameras = other shots in ${su.name}`:'',!X.header?`${P.title} · Sc ${sc.num} · ${sh._setup?su.name:'Shot '+sh.num}${X._pg?' · '+X._pg:''}`:''].filter(Boolean).join(' · '),{size:11,c:T.sub});
   frame+=txt(DX+8,DY+DH+39,'Planning reference for placement only. Not an exact representation of the lighting or framing on set.',{size:12,c:T.sub});
@@ -2748,13 +2748,13 @@ function exportPlan(X){const rows=exportRows(X);const multi=X.scope!=='shot'&&ro
   const pages=[];for(let i=0;i<nc;i++)pages.push({kind:'contents',part:i,parts:nc});pages.push(...front,...body);
   pages.forEach((p,i)=>p.no=i+1);return {pages,rows};}
 const CT_ROWS=32;
-function pageTheme(X){const dark=X.theme==='dark';return dark?{bg:'#15171a',ink:'#e3e6ea',sub:'#8d949e',band:'#23272c',rule:'#3a3f46',head:'#0c0d0f'}:{bg:'#ffffff',ink:'#1d2024',sub:'#6b7280',band:'#f1f3f5',rule:'#c9ced5',head:'#16181b'};}
+function pageTheme(X){const dark=X.theme==='dark';return dark?{bg:'#15171a',ink:'#e3e6ea',sub:'#e3e6ea',band:'#23272c',rule:'#3a3f46',head:'#0c0d0f'}:{bg:'#ffffff',ink:'#1d2024',sub:'#1d2024',band:'#f1f3f5',rule:'#c9ced5',head:'#16181b'};}
 function scopeLabel(X,rows){const scs=[...new Set(rows.map(r=>r.sc))];return X.scope==='day'?(typeof dayLabel==='function'?dayLabel(dayById(X.dayId),true):'Shooting day'):X.scope==='project'?'Whole project':X.scope==='setup'?`Scene ${scs[0]?scs[0].num:''} · ${rows[0]?rows[0].su.name:''}`:X.scope==='pick'?`${rows.length} chosen shot${rows.length===1?'':'s'}`:`Scene ${scs.map(s=>s.num).join(', ')}`;}
 function pageFrame(X,title,right,sub,pg){const T=pageTheme(X);const Wd=1650,Ht=1275;const F="Lato,Helvetica,Arial,sans-serif",G="'EB Garamond',Garamond,Georgia,serif";
   const txt=(x,y,s,o)=>`<text x="${x}" y="${y}" font-family="${o&&o.mono?"'Courier New',Courier,monospace":o&&o.gar?G:F}" font-size="${(o&&o.size)||13}" font-weight="${o&&o.gar?500:(o&&o.w)||400}" ${o&&o.it?'font-style="italic"':''} fill="${(o&&o.c)||T.ink}" ${o&&o.anchor?`text-anchor="${o.anchor}"`:''}>${esc(s)}</text>`;
   const head=`<rect x="0" y="0" width="${Wd}" height="86" fill="${T.head}"/>`+txt(30,38,P.title,{size:28,gar:1,c:'#fff'})+txt(30,65,sub,{size:17,gar:1,c:'#f0935a'})
-    +`<text x="${Wd/2}" y="50" text-anchor="middle" font-family="${G}" font-style="italic" font-size="22" fill="#f3e9d7">Clementine Films</text>`+txt(Wd/2,74,pg,{size:12,c:'#aab1bb',anchor:'middle'})
-    +txt(Wd-30,38,title,{size:30,gar:1,c:'#fff',anchor:'end'})+txt(Wd-30,64,right,{size:13,c:'#aab1bb',anchor:'end'});
+    +`<text x="${Wd/2}" y="50" text-anchor="middle" font-family="${G}" font-style="italic" font-size="22" fill="#f3e9d7">Clementine Films</text>`+txt(Wd/2,74,pg,{size:12,c:'#ffffff',anchor:'middle'})
+    +txt(Wd-30,38,title,{size:30,gar:1,c:'#fff',anchor:'end'})+txt(Wd-30,64,right,{size:13,c:'#ffffff',anchor:'end'});
   const foot=txt(30,Ht-22,'Planning reference for placement only. Not an exact representation of the lighting or framing on set.',{size:11,c:T.sub});
   const wrap=inner=>`<svg xmlns="http://www.w3.org/2000/svg" width="${Wd}" height="${Ht}" viewBox="0 0 ${Wd} ${Ht}"><defs><style>${BRANDFF}</style></defs><rect width="${Wd}" height="${Ht}" fill="${T.bg}"/>${head}${inner}${foot}</svg>`;
   return {T,txt,wrap};}
