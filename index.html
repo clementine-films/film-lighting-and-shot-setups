@@ -731,13 +731,16 @@ function renderItems(items,o){
         let shape;
         if(b>=180)shape=`<circle r="${Lb}" fill="url(#${gid})"/>`;
         else{const a=b/2*D2R,x=Lb*Math.cos(a),y=Lb*Math.sin(a);shape=`<path d="M0 0 L${x} ${-y} A${Lb} ${Lb} 0 0 1 ${x} ${y} Z" fill="url(#${gid})"/><path d="M0 0 L${x} ${-y} M0 0 L${x} ${y}" stroke="${col}" stroke-opacity="${.35*ga/C.beamA}" stroke-width="${px}" fill="none"/>`;}
-        const fx=beamFx(it,gid,items,o,Lb,b,col,ga);L1.beams+=`<g transform="${tr}" pointer-events="none" ${fx.attr}><defs>${fx.defs}<radialGradient id="${gid}" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="${Lb}"><stop offset="0" stop-color="${col}" stop-opacity="${ga}"/><stop offset=".55" stop-color="${col}" stop-opacity="${ga*.45}"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></radialGradient></defs>${shape}</g>`;L1.beams+=fx.extra;
+        let Lg=Lb,gcx=0;const tl=it.tilt||'Level',hh=+it.height||0;let fxOff=false;
+        if(tl==='Straight down'){const rad=Math.max(1,Math.min(Lb*1.2,Math.max(hh,4)*Math.tan(Math.min(b,150)/2*D2R)));Lg=rad*1.15;fxOff=true;shape=`<circle r="${rad}" fill="url(#${gid})"/><circle r="${rad}" fill="none" stroke="${col}" stroke-opacity="${.5*ga/C.beamA}" stroke-width="${px}" stroke-dasharray="${4*px} ${3*px}"/>`;}
+        else if(tl==='Tilted down'&&b<180){const d=Math.max(1.5,Math.min(Lb,hh||6));const a2=Math.min(b,150)/2*D2R;const ac=d*Math.tan(a2),al=ac*1.45;const x=d*Math.cos(a2),y=d*Math.sin(a2);Lg=d+al;shape=`<path d="M0 0 L${x} ${-y} L${d+al*.15} ${-ac} L${d+al*.15} ${ac} L${x} ${y} Z" fill="url(#${gid})"/><ellipse cx="${d}" cy="0" rx="${al}" ry="${ac}" fill="url(#${gid})" fill-opacity=".8"/><ellipse cx="${d}" cy="0" rx="${al}" ry="${ac}" fill="none" stroke="${col}" stroke-opacity="${.45*ga/C.beamA}" stroke-width="${px}" stroke-dasharray="${4*px} ${3*px}"/>`;fxOff=true;}
+        const fx=fxOff?{attr:'',defs:'',extra:''}:beamFx(it,gid,items,o,Lb,b,col,ga);L1.beams+=`<g transform="${tr}" pointer-events="none" ${fx.attr}><defs>${fx.defs}<radialGradient id="${gid}" gradientUnits="userSpaceOnUse" cx="${gcx}" cy="0" r="${Lg}"><stop offset="0" stop-color="${col}" stop-opacity="${ga}"/><stop offset=".55" stop-color="${col}" stop-opacity="${ga*.45}"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></radialGradient></defs>${shape}</g>`;L1.beams+=fx.extra;
       }
-      g=lightGlyph(it,L,C,px,col,on);
+      g=lightGlyph(it,L,C,px,col,on);if(typeof isOverhead==='function'&&isOverhead(it))g+=`<circle r="${s*.9+.35}" fill="none" stroke="${col}" stroke-width="${1.3*px}" stroke-dasharray="${3*px} ${2.5*px}"/>`;
       L1.lights+=`<g ${ida} transform="${tr}" ${o.ghost?'opacity=".35"':''}>${g}${selStroke}</g>`;
       // badge + label (unrotated)
       if(!o.ghost){const n=o.nums[it.id];const off=(s*.9+.55);const ang=((it.r||0)+180)*D2R;const bx=it.x+Math.cos(ang)*off,by=it.y+Math.sin(ang)*off;const br=8*px;
-        L1.labels+=`<g pointer-events="none"><circle cx="${bx}" cy="${by}" r="${br}" fill="${on?C.badge:C.sub}"/><text x="${bx}" y="${by}" dy=".35em" text-anchor="middle" font-family="${C.mono}" font-weight="600" font-size="${fs}" fill="${C.badgeText}">${n}</text>`;
+        L1.labels+=`<g pointer-events="none">${typeof isOverhead==='function'&&isOverhead(it)?`<text x="${bx}" y="${by-br-2*px}" text-anchor="middle" font-family="${C.font}" font-weight="700" font-size="${fs*.85}" fill="${C.text}" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}">↑${esc(fmtFt(+it.height||0))}</text>`:''}<circle cx="${bx}" cy="${by}" r="${br}" fill="${on?C.badge:C.sub}"/><text x="${bx}" y="${by}" dy=".35em" text-anchor="middle" font-family="${C.mono}" font-weight="600" font-size="${fs}" fill="${C.badgeText}">${n}</text>`;
         if(o.labels==='full'){const t1=(it.label?it.label+' · ':'')+L.name.replace(/ \(.*\)/,'');const t2=[it.role,it.watts?fmtW(+it.watts):''].filter(Boolean).join(' · ');
           L1.labels+=`<text data-lid="${it.id}" data-p="5" data-ax="${bx}" data-ay="${by}" data-ar="${br}" x="${bx+br+3*px}" y="${by-1*px}" font-family="${C.font}" font-size="${fs}" font-weight="600" fill="${C.text}" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}">${esc(t1)}</text><text data-lid="${it.id}" x="${bx+br+3*px}" y="${by+fs}" font-family="${C.font}" font-size="${fs*.9}" fill="${C.sub}" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}">${esc(t2)}</text>`;}
         L1.labels+='</g>';}
@@ -2608,6 +2611,59 @@ reorder(FRAME_SIZES,[['4×4',4],['6×6',6],['8×8',8],['12×12',12],['12×20',20
 {const keep=LIBALL.filter(e=>!(!e.kit&&(e.key==='flag'||e.key==='bounce')));LIBALL.splice(0,LIBALL.length,...keep);}
 
 /* ============================================================
+   Overhead lighting: rigging pieces, lights that clip onto them, beams by tilt and height
+   ============================================================ */
+const RIG={speedrail:'rail',wallspreader:'rail',pipegrid:'area',autopole:'point'};
+const rigDef=(key,name,w,h,shape,label,elev)=>def(key,{cat:'Grip',group:'Overhead rigging',name,kind:'set',shape,layer:'grip',rig:RIG[key],defaults:{w,h,label,elev}});
+rigDef('speedrail','Speed-rail / pipe',10,.35,'speedrail','',10);
+rigDef('wallspreader','Wall spreader (2×4 between walls)',10,.35,'spreader','Wall spreader',9);
+rigDef('pipegrid','Pipe grid',12,12,'pipegrid','Pipe grid',11);
+rigDef('autopole','Autopole',.6,.6,'autopole','Autopole',10);
+const isRig=it=>it&&LIB[it.t]&&LIB[it.t].rig;
+const rigOf=l=>l.rig?activeItems().find(i=>i.id===l.rig&&isRig(i)):null;
+function isOverhead(it){return !!(it.rig||/Overhead|pipe|Menace|boom/i.test(it.mount||'')||it.tilt==='Straight down');}
+{const _sg=setGlyph;setGlyph=function(it,L,C,px){const w=+it.w||1,h=+it.h||1;const rc=C.grip||C.setStroke;
+  switch(L.shape){
+    case 'speedrail':case 'spreader':{let d='';const n=Math.max(1,Math.round(w/4));for(let i=0;i<=n;i++){const x=-w/2+i*w/n;d+=`M${x} ${-h*.9} V${h*.9} `;}
+      return `<rect x="${-w/2}" y="${-h/2}" width="${w}" height="${h}" rx="${h/2}" fill="${rc}" fill-opacity=".55" stroke="${rc}" stroke-width="${px}"/>`+(L.shape==='spreader'?`<rect x="${-w/2-.25}" y="${-h}" width=".5" height="${2*h}" fill="${rc}"/><rect x="${w/2-.25}" y="${-h}" width=".5" height="${2*h}" fill="${rc}"/>`:`<path d="${d}" stroke="${rc}" stroke-width="${px}" stroke-opacity=".7"/>`);}
+    case 'pipegrid':{let d='';const st=Math.max(2,Math.min(w,h)/3);for(let x=-w/2;x<=w/2+.01;x+=st)d+=`M${x} ${-h/2} V${h/2} `;for(let y=-h/2;y<=h/2+.01;y+=st)d+=`M${-w/2} ${y} H${w/2} `;
+      return `<rect x="${-w/2}" y="${-h/2}" width="${w}" height="${h}" fill="transparent"/><path d="${d}" stroke="${rc}" stroke-width="${2.2*px}" stroke-opacity=".75" stroke-dasharray="${6*px} ${3*px}"/>`;}
+    case 'autopole':return `<circle r="${w/2}" fill="${rc}" stroke="${C.bg}" stroke-width="${px}"/><circle r="${w/5}" fill="${C.bg}"/>`;}
+  return _sg(it,L,C,px);};}
+// a light dropped on a rail, grid or pole clips onto it and moves with it
+function rigLocal(r,x,y){const a=-(r.r||0)*D2R;const dx=x-r.x,dy=y-r.y;return {u:dx*Math.cos(a)-dy*Math.sin(a),v:dx*Math.sin(a)+dy*Math.cos(a)};}
+function rigWorld(r,u,v){const a=(r.r||0)*D2R;return {x:r2(r.x+u*Math.cos(a)-v*Math.sin(a)),y:r2(r.y+u*Math.sin(a)+v*Math.cos(a))};}
+function rigHit(r,x,y){const p=rigLocal(r,x,y),k=RIG[r.t],w=+r.w||1,h=+r.h||1;if(k==='point')return Math.hypot(p.u,p.v)<1.2?{u:0,v:0}:null;
+  if(k==='rail')return Math.abs(p.v)<1&&Math.abs(p.u)<=w/2+.5?{u:Math.max(-w/2,Math.min(w/2,p.u)),v:0}:null;
+  return Math.abs(p.u)<=w/2+.5&&Math.abs(p.v)<=h/2+.5?{u:Math.max(-w/2,Math.min(w/2,p.u)),v:Math.max(-h/2,Math.min(h/2,p.v))}:null;}
+function rigFollow(ids){activeItems().forEach(l=>{if(!l.rig||(ids&&ids.includes(l.id)))return;const r=rigOf(l);if(!r){return;}if(ids&&!ids.includes(r.id))return;const q=rigWorld(r,l.rigU||0,l.rigV||0);if(l.x!==q.x||l.y!==q.y){l.x=q.x;l.y=q.y;try{syncOwned(l);}catch(e){}}});}
+{const _rc=renderCanvas;renderCanvas=function(){try{if(drag&&drag.type==='move'&&drag.moved)rigFollow(drag.ids||[]);}catch(e){}_rc();};}
+function rigSettle(){let msg='';const sel=new Set(selIds());activeItems().forEach(l=>{const L=LIB[l.t];if(!L||L.kind!=='light')return;const r=rigOf(l);
+  if(l.rig&&!r){delete l.rig;return;}
+  if(r&&sel.has(l.id)&&!sel.has(r.id)){const p=rigHit(r,l.x,l.y);if(!p){delete l.rig;msg='Light is off the rig';return;}l.rigU=r2(p.u);l.rigV=r2(p.v);const q=rigWorld(r,p.u,p.v);l.x=q.x;l.y=q.y;return;}
+  if(!r&&sel.has(l.id)){const hit=activeItems().filter(isRig).map(x=>({x,p:rigHit(x,l.x,l.y)})).find(o=>o.p);if(hit){const R=hit.x;l.rig=R.id;l.rigU=r2(hit.p.u);l.rigV=r2(hit.p.v);const q=rigWorld(R,hit.p.u,hit.p.v);l.x=q.x;l.y=q.y;l.mount='Overhead / pipe';if(!(+l.height>=8))l.height=+R.elev||10;if(!l.tilt||l.tilt==='Level')l.tilt='Tilted down';msg=`Light clipped onto the ${LIB[R.t].name.split(' (')[0].toLowerCase()} at ${fmtFt(+l.height)}. Move the rig and it goes with it.`;}}});
+  rigFollow();return msg;}
+{window.addEventListener('pointerup',()=>setTimeout(()=>{if(drag&&ptrs.size)return;const b=JSON.stringify(activeItems().filter(i=>i.rig||isRig(i)).map(i=>[i.id,i.x,i.y,i.rig]));let m='';try{m=rigSettle();}catch(e){}const a=JSON.stringify(activeItems().filter(i=>i.rig||isRig(i)).map(i=>[i.id,i.x,i.y,i.rig]));if(a!==b){renderCanvas();renderQuick();scheduleSave();}if(m)toast(m,4000);},0));}
+// height on the floating bar for rigs, and "on the rig" note for clipped lights
+{const _rq=renderQuick;renderQuick=function(){_rq();const q=$('#quick');if(!q||!q.innerHTML||fromQuick)return;const it=selItem();if(!it||selIds().length!==1)return;const b=q.querySelector('b');if(!b)return;
+  if(isRig(it))b.insertAdjacentHTML('afterend',`<label class="qf">Height<input class="in" type="number" data-k="elev" value="${esc(it.elev||10)}" min="1" step=".5" style="width:58px"></label>`);
+  else if(it.rig&&rigOf(it))b.insertAdjacentHTML('afterend',`<span class="qm" style="color:var(--green)">on the ${esc(LIB[rigOf(it).t].name.split(' (')[0].toLowerCase())} · ${fmtFt(+it.height||0)}</span>`);};}
+// rigging + safety in the gear list
+{const _g=gearForItems;gearForItems=function(items,map,shotKey){const add=(cat,name,q,why)=>{const k=cat+'|'+name;map[k]=map[k]||{cat,name,q:0,why:why||''};map[k].cur=(map[k].cur||0)+q;};
+  items.forEach(it=>{const L=LIB[it.t];if(!L)return;
+    if(it.t==='speedrail')add('Grip — overhead rigging','Speed-rail 1¼″ (10′ lengths)',Math.max(1,Math.ceil((+it.w||10)/10)),'from rigging on the plan');
+    if(it.t==='wallspreader')add('Grip — overhead rigging','Wall spreader kit (pair of ends)',1,'2×4 or 2×6 cut to fit');
+    if(it.t==='pipegrid'){add('Grip — overhead rigging','Speed-rail 1¼″ (10′ lengths)',Math.max(2,Math.ceil(2*((+it.w||12)+(+it.h||12))/10)),'pipe grid');add('Grip — overhead rigging','Cheeseborough / grid clamp',4,'pipe grid corners');}
+    if(it.t==='autopole')add('Grip — overhead rigging','Autopole',1,'');
+    if(L.kind==='light'&&isOverhead(it)){add('Grip — overhead rigging','Safety cable',1,'one per overhead light');const r=it.rig?items.find(i=>i.id===it.rig):null;
+      add('Grip — overhead rigging',r&&r.t==='autopole'?'Mafer clamp w/ baby pin':'Cardellini / pipe clamp w/ baby pin',1,'one per rigged light');}});
+  return _g(items,map,shotKey);};}
+// rebuild the library list so the rigging pieces show up (same grouping as the outdoor rebuild)
+{const arr=libEntries().filter(e=>!(!e.kit&&(e.key==='flag'||e.key==='bounce')));const first={};arr.forEach((e,i)=>{const g=(e.kit?'k':'')+e.cat+'|'+e.group;if(!(g in first))first[g]=i;});
+  if(first['Set|Street']!=null)first['Set|Ground & roads']=first['Set|Street']-.5;if(first['Grip|Overhead rigging']!=null&&first['Grip|Stands']!=null)first['Grip|Overhead rigging']=first['Grip|Stands']+.5;
+  const ord=arr.map((e,i)=>[first[(e.kit?'k':'')+e.cat+'|'+e.group],i,e]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]).map(x=>x[2]);LIBALL.splice(0,LIBALL.length,...ord);}
+
+/* ============================================================
    Shooting days: list your days, put scenes / shots on them, export a day
    ============================================================ */
 function daysList(){P.days=P.days||[];return P.days;}
@@ -2709,7 +2765,7 @@ function buildSheet0(sc,su,sh,X){
       t+=txt(RX+10,y,'#',{size:10.5,w:700,c:T.sub})+txt(RX+36,y,'FIXTURE',{size:10.5,w:700,c:T.sub})+txt(RX+230,y,'ROLE',{size:10.5,w:700,c:T.sub})+txt(RX+335,y,'COLOR / MOD',{size:10.5,w:700,c:T.sub})+txt(RX+RW-10,y,'W · CKT',{size:10.5,w:700,c:T.sub,anchor:'end'});y+=20;
       let shown=0;lights.forEach(l=>{if(!room(X.powerBlock?150:24))return;shown++;const L=LIB[l.t];const on=l.on!==false;t+=`<circle cx="${RX+18}" cy="${y-4}" r="9" fill="${on?C.badge:T.off}"/>`+txt(RX+18,y,nums[l.id],{size:11,w:700,c:C.badgeText,anchor:'middle'});
         const nm=(l.label?l.label+' — ':'')+L.name.replace(/ \(.*\)/,'');t+=txt(RX+36,y,nm.length>30?nm.slice(0,29)+'…':nm,{size:11.5,w:600,c:on?T.ink:T.off})+txt(RX+230,y,(l.role||'').slice(0,15)+(on?'':' (off)'),{size:11.5,c:on?T.ink:T.off});
-        const cm=[GELS[l.gel]==='c'?'color gel':(effKelvin(l)+'K'),l.gel!=='None'&&GELS[l.gel]!=='c'?l.gel:'',l.intensity<100?l.intensity+'%':''].filter(Boolean).join(' · ');const det=[l.modifier!=='None'?l.modifier:'',...lightBits(l),l.diff&&l.diff!=='None'&&l.diffAt&&l.diffAt!==DIFFAT[0]?l.diffAt.toLowerCase():'',l.tilt&&l.tilt!=='Level'?l.tilt.toLowerCase():''].filter(Boolean).join(' · ');
+        const cm=[GELS[l.gel]==='c'?'color gel':(effKelvin(l)+'K'),l.gel!=='None'&&GELS[l.gel]!=='c'?l.gel:'',l.intensity<100?l.intensity+'%':''].filter(Boolean).join(' · ');const det=[l.modifier!=='None'?l.modifier:'',...lightBits(l),l.diff&&l.diff!=='None'&&l.diffAt&&l.diffAt!==DIFFAT[0]?l.diffAt.toLowerCase():'',typeof isOverhead==='function'&&isOverhead(l)?('overhead at '+fmtFt(+l.height||0)+(l.rig&&typeof rigOf==='function'&&rigOf(l)?' on '+LIB[rigOf(l).t].name.split(' (')[0].toLowerCase():'')):'',l.tilt&&l.tilt!=='Level'?l.tilt.toLowerCase():''].filter(Boolean).join(' · ');
         t+=`<rect x="${RX+335}" y="${y-11}" width="10" height="10" fill="${hex(lightRGB(l))}" stroke="${T.off}" stroke-width=".5"/>`+txt(RX+350,y,cm.length>22?cm.slice(0,21)+'…':cm,{size:10.5});
         t+=txt(RX+RW-10,y,`${l.watts?fmtW(+l.watts):'—'}${l.circuit?' · '+l.circuit:''}`,{size:11,anchor:'end'});y+=21;if(det){t+=txt(RX+36,y-5,det.length>86?det.slice(0,85)+'…':det,{size:10,c:T.sub});y+=13;}});
       if(lights.length>shown){t+=txt(RX+36,y,`+ ${lights.length-shown} more…`,{size:11,c:T.sub});y+=20;}
