@@ -2593,9 +2593,10 @@ function openOrganize(scId){const sc=P.scenes.find(s=>s.id===scId)||scene();snap
    Grip sizes: one library entry per type, standard sizes picked on the item
    ============================================================ */
 function reorder(obj,list){const old=Object.assign({},obj);Object.keys(obj).forEach(k=>delete obj[k]);list.forEach(([k,v])=>obj[k]=v);Object.keys(old).forEach(k=>{if(!(k in obj))obj[k]=old[k];});}
-reorder(FLAG_SIZES,[['12×18',1.5],['18×24',2],['24×30',2.5],['24×36',3],['30×36',3],['4×4',4],['40×40 floppy',3.33],['4×4 floppy',4],['10×42 cutter',3.5],['18×48 cutter',4],['24×72 cutter',6]]);
-reorder(BOUNCE_SIZES,[['Flexfill 22″',1.83],['Flexfill 32″',2.67],['Flexfill 38″',3.17],['Flexfill 42″',3.5],['Flexfill 52″',4.33],['2×2',2],['2×3',3],['4×4',4],['4×8',8]]);
-reorder(FRAME_SIZES,[['4×4',4],['6×6',6],['8×8',8],['12×12',12],['20×20',20]]);
+// industry-standard sizes (inches unless marked ′); value = width drawn on the plan, in feet
+reorder(FLAG_SIZES,[['12×18',1.5],['18×24',2],['24×30',2.5],['24×36',3],['30×36',3],['4×4',4],['40×40 floppy',3.33],['4×4 floppy',4],['4×8 floppy (open)',8],['10×42 cutter',3.5],['18×48 cutter',4],['24×72 cutter',6],['6″ dot',.5],['10″ dot',.83],['2×12 finger',1],['4×14 finger',1.17]]);
+reorder(BOUNCE_SIZES,[['2×2',2],['2×3',3],['30×40 foamcore',3.33],['32×40 foamcore',3.33],['40×60 foamcore',5],['4×4',4],['4×8',8],['Flexfill 22″',1.83],['Flexfill 32″',2.67],['Flexfill 38″',3.17],['Flexfill 42″',3.5],['Flexfill 52″',4.33],['Flexfill 48×72',6]]);
+reorder(FRAME_SIZES,[['4×4',4],['6×6',6],['8×8',8],['12×12',12],['12×20',20],['20×20',20],['20×30',30],['30×30',30]]);
 // standard-size picker right on the floating bar
 {const _rq=renderQuick;renderQuick=function(){_rq();const q=$('#quick');if(!q||!q.innerHTML||fromQuick)return;const it=selItem();if(!it||selIds().length!==1)return;
   const opts=(k,list,v)=>`<select class="in" data-k="${k}" style="width:auto">${list.map(o=>`<option ${o===v?'selected':''}>${esc(o)}</option>`).join('')}</select>`;let h='';
