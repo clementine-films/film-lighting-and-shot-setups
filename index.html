@@ -2228,6 +2228,19 @@ function renderLayerPop(){const p=$('#layerPop');if(!p||!p.classList.contains('o
   document.addEventListener('pointerdown',e=>{if(p.classList.contains('open')&&!p.contains(e.target)&&e.target.id!=='bLayers')p.classList.remove('open');});})();
 {const _rp3=renderPanel;renderPanel=function(){_rp3();if(V.rightTab!=='item'||!UI.R)return;const it=selItem();if(!it||it.t==='line')return;const L=LIB[it.t];if(!L||L.kind!=='set'||layerOf(it)!=='pd')return;
     $('#panel').insertAdjacentHTML('beforeend',`<div class="grp"><h4>Layers</h4><label class="chk"><input type="checkbox" data-k="withLight" ${it.withLight?'checked':''}> Affects the lighting: keep it visible with the Lighting layer</label></div>`);};}
+
+/* ---- align and space out several selected items ---- */
+function boxOf(it){if(it.t==='line'){const xs=it.pts.map(p=>p.x),ys=it.pts.map(p=>p.y);return {x0:Math.min(...xs),x1:Math.max(...xs),y0:Math.min(...ys),y1:Math.max(...ys)};}
+  let hw=.5,hh=.5;if(+it.w&&+it.h){const a=(it.r||0)*D2R,c=Math.abs(Math.cos(a)),s=Math.abs(Math.sin(a));hw=it.w/2*c+it.h/2*s;hh=it.w/2*s+it.h/2*c;}return {x0:it.x-hw,x1:it.x+hw,y0:it.y-hh,y1:it.y+hh};}
+function nudge(it,dx,dy){if(!dx&&!dy)return;if(it.t==='line')it.pts.forEach(p=>{p.x=r2(p.x+dx);p.y=r2(p.y+dy);});else{it.x=r2(it.x+dx);it.y=r2(it.y+dy);try{syncOwned(it);}catch(e){}}}
+function alignSel(mode){const its=selIds().map(id=>(findItem(id)||{}).it).filter(i=>i&&!isWall(i));if(its.length<2){toast('Select two or more items to line up');return;}const owned=new Set(its.filter(i=>i.t!=='line').map(i=>i.id));const list=its.filter(i=>!(i.t==='line'&&i.owner&&owned.has(i.owner)));
+  snap();const B=list.map(boxOf);const X0=Math.min(...B.map(b=>b.x0)),X1=Math.max(...B.map(b=>b.x1)),Y0=Math.min(...B.map(b=>b.y0)),Y1=Math.max(...B.map(b=>b.y1));const cx=b=>(b.x0+b.x1)/2,cy=b=>(b.y0+b.y1)/2;
+  if(mode==='hs'||mode==='vs'){if(list.length<3){toast('Select three or more items to space them evenly');return;}const ax=mode==='hs'?cx:cy;const ord=list.map((it,i)=>({it,c:ax(B[i])})).sort((a,b)=>a.c-b.c);const a=ord[0].c,z=ord[ord.length-1].c;ord.forEach((o,i)=>{const t=a+(z-a)*i/(ord.length-1);nudge(o.it,mode==='hs'?t-o.c:0,mode==='vs'?t-o.c:0);});}
+  else list.forEach((it,i)=>{const b=B[i];nudge(it,mode==='l'?X0-b.x0:mode==='r'?X1-b.x1:mode==='c'?(X0+X1)/2-cx(b):0,mode==='t'?Y0-b.y0:mode==='b'?Y1-b.y1:mode==='m'?(Y0+Y1)/2-cy(b):0);});
+  try{dollyFollow();}catch(e){}changed();}
+{const _rq3=renderQuick;renderQuick=function(){_rq3();const q=$('#quick');if(!q||!q.innerHTML||fromQuick)return;const its=selIds().map(id=>(findItem(id)||{}).it).filter(i=>i&&!isWall(i));if(its.length<2)return;const sep=q.querySelector('.qsep');if(!sep)return;
+    sep.insertAdjacentHTML('beforebegin',`<select class="in" data-align="1" style="width:auto;height:28px;padding:0 6px" title="Line up or space out the selected items"><option value="">Align…</option><optgroup label="Line up side to side"><option value="l">Left edges</option><option value="c">Centres (in a column)</option><option value="r">Right edges</option></optgroup><optgroup label="Line up top to bottom"><option value="t">Top edges</option><option value="m">Middles (in a row)</option><option value="b">Bottom edges</option></optgroup><optgroup label="Space evenly"><option value="hs">Across</option><option value="vs">Down</option></optgroup></select>`);};}
+$('#quick').addEventListener('change',e=>{if(!e.target.dataset||!e.target.dataset.align)return;e.stopPropagation();const v=e.target.value;if(v)alignSel(v);},true);
 const BRANDFF=(()=>{let o='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.type===5&&/EB Garamond|Lato/.test(r.cssText))o+=r.cssText;}catch(e){}}return o;})();
 /* ============================================================
    Export
