@@ -274,6 +274,22 @@ body.narrow #left{left:0} body.narrow #right{right:0}
 :root[data-theme="light"] #modal{background:rgba(30,35,45,.35)}
 :root[data-theme="light"] #tools,:root[data-theme="light"] #quick,:root[data-theme="light"] #viewBar,:root[data-theme="light"] #calc,:root[data-theme="light"] #layerPop{background:rgba(247,248,250,.97);box-shadow:0 6px 18px rgba(20,30,50,.14)}
 :root[data-theme="light"] #zoomBox{background:var(--panel)}
+.orgGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;max-height:58vh;overflow:auto;padding:2px}
+.orgSu{border:1px solid var(--line);border-radius:8px;background:var(--panel2);display:flex;flex-direction:column;min-height:90px}
+.orgSu.over{outline:2px solid var(--teal);outline-offset:-1px}
+.orgNew{border-style:dashed;justify-content:center}
+.orgHead{display:flex;gap:6px;align-items:center;padding:6px;border-bottom:1px solid var(--line)}.orgHead .in{flex:1;min-width:0;font-weight:700}
+.orgShots{padding:4px;display:flex;flex-direction:column;gap:2px}
+.orgShot{display:flex;gap:6px;align-items:center;padding:5px 6px;border-radius:5px;cursor:grab;font-size:12.5px}
+.orgShot:hover{background:var(--panel)}.orgShot.on{background:color-mix(in srgb,var(--teal) 18%,transparent)}
+.orgShot span{color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.setup.over{outline:2px dashed var(--teal);outline-offset:2px;border-radius:6px}
+.dayList{display:flex;flex-direction:column;gap:6px;margin-top:8px}.dayRow{display:flex;gap:6px;align-items:center}
+.dayScenes{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.daySc{border-bottom:1px solid var(--line)}.dayScRow,.dayShRow{display:flex;gap:8px;align-items:center;padding:6px 8px}
+.dayScHead{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px}
+.dayShots{padding:0 0 6px 46px}.dayShRow{padding:3px 8px;font-size:12.5px}.dayShRow span{flex:1;min-width:0;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dayChip{margin-left:auto;font-size:10px;padding:1px 6px;border-radius:9px;background:color-mix(in srgb,var(--amber) 22%,transparent);color:var(--amber2);white-space:nowrap;flex:none}
 </style>
 </head>
 <body>
@@ -1437,7 +1453,7 @@ function panelShot(){
    ${fld('Setup name',`<input class="in" data-o="setup" data-k="name" value="${esc(su.name)}">`)}
    <div class="f"><label>Lighting intent</label><textarea class="in" data-o="setup" data-k="notes" rows="3" placeholder="Motivation, mood, contrast ratio, references">${esc(su.notes)}</textarea></div></div>
    <div class="grp"><h4>Shot ${esc(sh.num)}</h4>
-   ${fld('In setup',`<select class="in" data-mvsu="1">${sc.setups.map(x=>`<option value="${x.id}" ${x.id===su.id?'selected':''}>${esc(x.name)}</option>`).join('')}<option value="__new">New setup…</option></select>`)}
+   ${typeof dayField==='function'?dayField(sh):''}${fld('In setup',`<select class="in" data-mvsu="1">${sc.setups.map(x=>`<option value="${x.id}" ${x.id===su.id?'selected':''}>${esc(x.name)}</option>`).join('')}<option value="__new">New setup…</option></select>`)}
    <div class="f2">${fld('Shot #',`<input class="in" data-o="shot" data-k="num" value="${esc(sh.num)}">`)}${fld('Size',`<select class="in" data-o="shot" data-k="size">${optList(SIZES,sh.size)}</select>`)}</div>
    <div class="f2">${fld('Angle',`<select class="in" data-o="shot" data-k="angle">${optList(ANGLES,sh.angle)}</select>`)}${fld('Movement',`<select class="in" data-o="shot" data-k="move">${optList(MOVES,sh.move)}</select>`)}</div>
    <div class="f"><label>Description</label><textarea class="in" data-o="shot" data-k="desc" rows="2" placeholder="What the shot shows">${esc(sh.desc)}</textarea></div>
@@ -2534,6 +2550,89 @@ function groundFields(it,fld,sel,inp){if(it.t==='road')return `<div class="f2">$
 {const arr=libEntries();const first={};arr.forEach((e,i)=>{const g=(e.kit?'k':'')+e.cat+'|'+e.group;if(!(g in first))first[g]=i;});
   if(first['Set|Street']!=null)first['Set|Ground & roads']=first['Set|Street']-.5;const ord=arr.map((e,i)=>[first[(e.kit?'k':'')+e.cat+'|'+e.group],i,e]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]).map(x=>x[2]);
   LIBALL.splice(0,LIBALL.length,...ord);}
+
+/* ============================================================
+   Organise shots into setups: drag shots between setups, bulk-move, rename, add, remove
+   ============================================================ */
+function newSetupFrom(sc,src){const letter=String.fromCharCode(65+Math.min(25,sc.setups.length));const su=mkSetup('Setup '+letter);
+  if(src){su.items=clone(src.items.filter(i=>(i.t==='line'&&i.kind==='wall')||(LIB[i.t]&&['set','talent','text','power'].includes(LIB[i.t].kind))));reId(su.items);}
+  sc.setups.push(su);return su;}
+function moveShots(sc,ids,to){const moved=[];sc.setups.forEach(su=>{su.shots=su.shots.filter(s=>{if(ids.includes(s.id)&&su!==to){moved.push(s);return false;}return true;});});
+  moved.sort((a,b)=>natCmp(a.num,b.num));to.shots.push(...moved);try{linkOrphans(P);}catch(e){}return moved.length;}
+// a setup must keep at least one shot: remove empty setups with nothing in them, give the rest a placeholder shot
+function tidySetups(sc){let note='';sc.setups=sc.setups.filter(su=>{if(su.shots.length)return true;const lights=su.items.some(i=>LIB[i.t]&&LIB[i.t].kind==='light');if(!lights&&!su.notes)return false;su.shots.push(mkShot(nextShotNum(sc)));note=`${su.name} had no shots left, so it got an empty shot to keep its lights.`;return true;});
+  if(!sc.setups.length){const su=mkSetup('Setup A');su.shots.push(mkShot(nextShotNum(sc)));sc.setups.push(su);}return note;}
+function openOrganize(scId){const sc=P.scenes.find(s=>s.id===scId)||scene();snap();const sel=new Set();
+  const draw=()=>{const m=$('#modalBox');
+    m.innerHTML=`<h3>Organize shots into setups</h3>
+      <div class="pSub">A <b>setup</b> is one lighting arrangement; every shot inside it shares those lights. Drag shots between setups, or tick several and move them together. Shots keep their camera, blocking and script lines when they move.</div>
+      <div style="display:flex;gap:8px;align-items:center;margin:8px 0"><label class="pSub" style="margin:0">Scene</label><select class="in" id="orgSc" style="flex:1">${P.scenes.map(s=>`<option value="${s.id}" ${s.id===sc.id?'selected':''}>${esc(s.num)} · ${esc(sceneHeading(s))}</option>`).join('')}</select></div>
+      <div class="orgGrid">${sc.setups.map(su=>{const nl=su.items.filter(i=>LIB[i.t]&&LIB[i.t].kind==='light').length;return `<div class="orgSu" data-drop="${su.id}">
+        <div class="orgHead"><input class="in" data-rn="${su.id}" value="${esc(su.name)}" aria-label="Setup name"><span class="pSub" style="margin:0;white-space:nowrap">${su.shots.length} shot${su.shots.length===1?'':'s'} · ${nl} light${nl===1?'':'s'}</span>${!su.shots.length&&!nl?`<button class="btn sm" data-rmsu="${su.id}" title="Remove this empty setup">✕</button>`:''}</div>
+        <div class="orgShots">${su.shots.map(s=>`<label class="orgShot ${sel.has(s.id)?'on':''}" draggable="true" data-drag="${s.id}"><input type="checkbox" data-pick="${s.id}" ${sel.has(s.id)?'checked':''}><b>${esc(s.num)}</b><span>${esc([s.size,s.desc].filter(Boolean).join(' — ')||'—')}</span></label>`).join('')||'<div class="pSub" style="padding:8px">Drop shots here</div>'}</div></div>`;}).join('')}
+        <div class="orgSu orgNew" data-drop="__new"><div class="pSub" style="padding:14px;text-align:center">＋ Drop shots here for a <b>new setup</b><br><small>Walls, set, actors and power are copied; lights start empty.</small></div></div></div>
+      <div class="mFoot" style="display:flex;flex-direction:row;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-top:10px"><div style="display:flex;flex-direction:row;gap:6px;align-items:center;flex-wrap:wrap"><span class="pSub" style="margin:0">${sel.size} selected →</span><select class="in" id="orgTo" style="width:auto">${sc.setups.map(su=>`<option value="${su.id}">${esc(su.name)}</option>`).join('')}<option value="__new">New setup</option></select><button class="btn" id="orgMove" ${sel.size?'':'disabled'}>Move</button></div><button class="btn pri" id="orgDone">Done</button></div>`;};
+  const target=id=>id==='__new'?newSetupFrom(sc,sc.setups[0]):sc.setups.find(s=>s.id===id);
+  const doMove=(ids,id)=>{if(!ids.length)return;const to=target(id);if(!to)return;const n=moveShots(sc,ids,to);ids.forEach(i=>sel.delete(i));changed();draw();if(n)toast(`${n} shot${n>1?'s':''} → ${to.name}`);};
+  openModal('','wide');draw();const M=$('#modalBox');
+  M.onchange=e=>{const t=e.target;if(t.id==='orgSc'){const n=tidySetups(sc);if(n)toast(n);changed();closeModal();openOrganize(t.value);return;}
+    if(t.dataset.pick){t.checked?sel.add(t.dataset.pick):sel.delete(t.dataset.pick);draw();}
+    if(t.dataset.rn){const su=sc.setups.find(s=>s.id===t.dataset.rn);if(su&&t.value.trim()){su.name=t.value.trim();changed();}}};
+  M.onclick=e=>{const t=e.target;if(t.id==='orgMove'){doMove([...sel],$('#orgTo').value);return;}
+    if(t.id==='orgDone'){const n=tidySetups(sc);if(n)toast(n,4000);fixView();changed();closeModal();return;}
+    const rm=t.closest('[data-rmsu]');if(rm){sc.setups=sc.setups.filter(s=>s.id!==rm.dataset.rmsu);changed();draw();}};
+  M.ondragstart=e=>{const d=e.target.closest('[data-drag]');if(!d)return;const ids=sel.has(d.dataset.drag)?[...sel]:[d.dataset.drag];e.dataTransfer.setData('text/x-shots',JSON.stringify(ids));e.dataTransfer.effectAllowed='move';};
+  M.ondragover=e=>{const z=e.target.closest('[data-drop]');if(!z)return;e.preventDefault();M.querySelectorAll('.orgSu.over').forEach(n=>n!==z&&n.classList.remove('over'));z.classList.add('over');};
+  M.ondragleave=e=>{const z=e.target.closest('[data-drop]');if(z&&!z.contains(e.relatedTarget))z.classList.remove('over');};
+  M.ondrop=e=>{const z=e.target.closest('[data-drop]');if(!z)return;e.preventDefault();let ids=[];try{ids=JSON.parse(e.dataTransfer.getData('text/x-shots')||'[]');}catch(_){}doMove(ids,z.dataset.drop);};}
+// drag a shot chip onto a setup in the left breakdown
+{const tree=$('#tree');
+  tree.addEventListener('dragstart',e=>{const c=e.target.closest('.shotChip[data-shot]');if(!c)return;e.dataTransfer.setData('text/x-shots',JSON.stringify([c.dataset.shot]));e.dataTransfer.effectAllowed='move';});
+  tree.addEventListener('dragover',e=>{const r=e.target.closest('.setup');if(!r||!e.dataTransfer.types.includes('text/x-shots'))return;e.preventDefault();tree.querySelectorAll('.setup.over').forEach(n=>n!==r&&n.classList.remove('over'));r.classList.add('over');});
+  tree.addEventListener('dragleave',e=>{const r=e.target.closest('.setup');if(r&&!r.contains(e.relatedTarget))r.classList.remove('over');});
+  tree.addEventListener('drop',e=>{const r=e.target.closest('.setup');if(!r)return;e.preventDefault();r.classList.remove('over');const row=r.querySelector('[data-setup]');let ids=[];try{ids=JSON.parse(e.dataTransfer.getData('text/x-shots')||'[]');}catch(_){}
+    const sc=scene(),to=sc.setups.find(s=>s.id===row.dataset.setup);if(!to||!ids.length)return;const from=sc.setups.find(s=>s.shots.some(x=>x.id===ids[0]));if(from===to)return;snap();moveShots(sc,ids,to);const n=tidySetups(sc);if(n)toast(n,4000);else toast(`Shot moved to ${to.name}`);V.setupId=to.id;V.shotId=ids[0];V.sel=null;fixView();changed();});
+  tree.addEventListener('click',e=>{const b=e.target.closest('[data-organize]');if(b){e.stopPropagation();openOrganize(b.dataset.organize);}},true);}
+{const _rt=renderTree;renderTree=function(){_rt();$('#tree').querySelectorAll('.shotChip[data-shot]').forEach(c=>c.setAttribute('draggable','true'));
+  const add=$('#tree').querySelector('[data-addsetup]');if(add&&!add.parentNode.querySelector('[data-organize]'))add.insertAdjacentHTML('afterend',` <button class="addMini" data-organize="${add.dataset.addsetup}" title="Move shots between setups, rename and add setups">⇄ organize</button>`);};}
+
+/* ============================================================
+   Shooting days: list your days, put scenes / shots on them, export a day
+   ============================================================ */
+function daysList(){P.days=P.days||[];return P.days;}
+const dayById=id=>daysList().find(d=>d.id===id);
+function dayLabel(d,long){if(!d)return '';let s=d.name||'Day';if(d.date){const dt=new Date(d.date+'T12:00:00');if(!isNaN(dt))s+=' · '+dt.toLocaleDateString(undefined,long?{weekday:'long',month:'long',day:'numeric',year:'numeric'}:{weekday:'short',month:'short',day:'numeric'});}return s;}
+function shotsOnDay(id){const out=[];P.scenes.forEach(sc=>sc.setups.forEach(su=>su.shots.forEach(sh=>{if(sh.day===id)out.push({sc,su,sh});})));return out;}
+function dayField(sh){const D=daysList();return `<div class="f"><label>Shooting day</label><div style="display:flex;gap:6px"><select class="in" data-o="shot" data-k="day" style="flex:1"><option value="">${D.length?'Not scheduled':'No days yet'}</option>${D.map(d=>`<option value="${d.id}" ${sh.day===d.id?'selected':''}>${esc(dayLabel(d))}</option>`).join('')}</select><button class="btn sm" data-days-open="1" title="Add or edit shooting days">Days…</button></div></div>`;}
+function openDays(){const D=daysList();snap();
+  const scDay=sc=>{const ds=new Set();sc.setups.forEach(su=>su.shots.forEach(sh=>ds.add(sh.day||'')));return ds.size===1?[...ds][0]:'__mixed';};
+  const opts=(v,mixed)=>`<option value="" ${v===''?'selected':''}>—</option>${mixed?`<option value="__mixed" selected disabled>Split across days</option>`:''}${D.map(d=>`<option value="${d.id}" ${v===d.id?'selected':''}>${esc(d.name||'Day')}</option>`).join('')}`;
+  const draw=()=>{const M=$('#modalBox');const open=M.dataset.open?JSON.parse(M.dataset.open):{};
+    M.innerHTML=`<h3>Shooting days</h3><div class="pSub">Add your days as you lock the schedule, then put each scene on a day. If a scene is split, open it and set the day per shot. Export ▸ <b>Shooting day</b> then prints just that day’s shots.</div>
+      <div class="dayList">${D.map((d,i)=>{const n=shotsOnDay(d.id).length;return `<div class="dayRow"><input class="in" data-dk="name" data-di="${d.id}" value="${esc(d.name||'')}" placeholder="Day ${i+1}" style="width:110px"><input class="in" type="date" data-dk="date" data-di="${d.id}" value="${esc(d.date||'')}" style="width:150px"><input class="in" data-dk="note" data-di="${d.id}" value="${esc(d.note||'')}" placeholder="Location / call time / notes" style="flex:1"><span class="pSub" style="margin:0;white-space:nowrap">${n} shot${n===1?'':'s'}</span><button class="btn sm" data-dup="${d.id}" title="Move up" ${i?'':'disabled'}>↑</button><button class="btn sm" data-drm="${d.id}" title="Remove day">✕</button></div>`;}).join('')||'<div class="pSub">No days yet.</div>'}
+      <button class="btn" id="dayAdd" style="margin-top:6px">+ Add day</button></div>
+      <div class="xSec" style="margin-top:12px">Scenes</div><div class="dayScenes">${P.scenes.map(sc=>{const v=scDay(sc);const isOpen=open[sc.id]||v==='__mixed';return `<div class="daySc"><div class="dayScRow"><button class="btn sm" data-dtog="${sc.id}" title="Set the day per shot">${isOpen?'▾':'▸'}</button><span class="sNum">${esc(sc.num)}</span><span class="dayScHead">${esc(sceneHeading(sc))}</span><select class="in" data-dsc="${sc.id}" style="width:150px">${opts(v,v==='__mixed')}</select></div>
+        ${isOpen?`<div class="dayShots">${sc.setups.map(su=>su.shots.map(sh=>`<div class="dayShRow"><b>${esc(sh.num)}</b><span>${esc(su.name)}${sh.desc?' · '+esc(sh.desc):''}</span><select class="in" data-dsh="${sh.id}" style="width:150px">${opts(sh.day||'')}</select></div>`).join('')).join('')}</div>`:''}</div>`;}).join('')}</div>
+      <div class="mFoot" style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn pri" id="dayDone">Done</button></div>`;};
+  openModal('','wide');$('#modalBox').dataset.open='';draw();const M=$('#modalBox');
+  const findSh=id=>{let r=null;P.scenes.forEach(sc=>sc.setups.forEach(su=>su.shots.forEach(sh=>{if(sh.id===id)r=sh;})));return r;};
+  M.onchange=e=>{const t=e.target;
+    if(t.dataset.dk){const d=dayById(t.dataset.di);if(d){d[t.dataset.dk]=t.value;changed();if(t.dataset.dk!=='note')draw();}return;}
+    if(t.dataset.dsc){const sc=P.scenes.find(s=>s.id===t.dataset.dsc);sc.setups.forEach(su=>su.shots.forEach(sh=>{sh.day=t.value||'';}));changed();draw();return;}
+    if(t.dataset.dsh){const sh=findSh(t.dataset.dsh);if(sh){sh.day=t.value||'';changed();draw();}}};
+  M.onclick=e=>{const t=e.target;
+    if(t.id==='dayAdd'){const d={id:rid(),name:'Day '+(D.length+1),date:'',note:''};const last=D[D.length-1];if(last&&last.date){const nx=new Date(last.date+'T12:00:00');nx.setDate(nx.getDate()+1);d.date=nx.toISOString().slice(0,10);}D.push(d);changed();draw();return;}
+    const rm=t.closest('[data-drm]');if(rm){const id=rm.dataset.drm;P.days=D.filter(d=>d.id!==id);D.splice(0,D.length,...P.days);P.days=D;P.scenes.forEach(sc=>sc.setups.forEach(su=>su.shots.forEach(sh=>{if(sh.day===id)sh.day='';})));changed();draw();return;}
+    const up=t.closest('[data-dup]');if(up){const i=D.findIndex(d=>d.id===up.dataset.dup);if(i>0){[D[i-1],D[i]]=[D[i],D[i-1]];changed();draw();}return;}
+    const tg=t.closest('[data-dtog]');if(tg){const o=M.dataset.open?JSON.parse(M.dataset.open):{};o[tg.dataset.dtog]=!o[tg.dataset.dtog];M.dataset.open=JSON.stringify(o);draw();return;}
+    if(t.id==='dayDone'){closeModal();changed();}};}
+// open from the breakdown header and from the shot panel
+{const h=$('#addScene');if(h)h.insertAdjacentHTML('beforebegin','<button class="addMini" id="openDays" title="Shooting days: schedule scenes and shots, then export a day">Days</button> ');
+  $('#openDays').onclick=()=>openDays();
+  document.getElementById('panel').addEventListener('click',e=>{if(e.target.closest('[data-days-open]')){e.stopPropagation();openDays();}},true);}
+// day chip in the breakdown, next to each scene
+{const _rt=renderTree;renderTree=function(){_rt();if(!daysList().length)return;$('#tree').querySelectorAll('[data-scene]').forEach(r=>{const sc=P.scenes.find(s=>s.id===r.dataset.scene);if(!sc)return;const ds=new Set();sc.setups.forEach(su=>su.shots.forEach(sh=>sh.day&&ds.add(sh.day)));if(!ds.size)return;
+  const names=[...ds].map(id=>dayById(id)).filter(Boolean).map(d=>d.name||'Day');if(names.length)r.insertAdjacentHTML('beforeend',`<span class="dayChip" title="${esc([...ds].map(id=>dayLabel(dayById(id))).join(', '))}">${esc(names.length>1?names[0]+' +'+(names.length-1):names[0])}</span>`);});};}
 const BRANDFF=(()=>{let o='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.type===5&&/EB Garamond|Lato/.test(r.cssText))o+=r.cssText;}catch(e){}}return o;})();
 /* ============================================================
    Export
@@ -2546,7 +2645,7 @@ async function saveFile(name,data){
   if(typeof data==='string'){showText(name+' (copy the contents below)',data);}else toast('Downloads aren’t available in this view. Open the page on claude.ai to export.');return false;
 }
 function wrapText(t,max){const lines=[];String(t||'').split(/\n/).forEach(par=>{const words=par.split(/\s+/).filter(Boolean);let cur='';words.forEach(w=>{if((cur+' '+w).trim().length>max){if(cur)lines.push(cur);cur=w;}else cur=(cur+' '+w).trim();});if(cur)lines.push(cur);});return lines;}
-const XDEF={layout:'sheet',theme:'paper',scope:'shot',format:'png',order:'shoot',contents:true,setupPages:true,overview:false,ovN:6,pick:null,scale:1.5,labels:'auto',grid:true,beams:true,dims:true,ghost:true,blocking:true,grip:true,power:true,
+const XDEF={layout:'sheet',theme:'paper',scope:'shot',format:'png',sideText:'lg',order:'shoot',contents:true,setupPages:true,overview:false,ovN:6,pick:null,scale:1.5,labels:'auto',grid:true,beams:true,dims:true,ghost:true,blocking:true,grip:true,power:true,
   header:true,f_scene:false,f_size:true,f_move:true,f_cam:true,f_cast:true,f_desc:true,f_blocking:true,f_intent:true,f_notes:true,f_script:false,lightKey:true,powerBlock:true,legend:true};
 function xo(){return Object.assign({},XDEF,P.exportOpts||{});}
 function sheetItems(su,sh,X){return activeItems(su,sh).filter(it=>{if(it.t==='line'){if(it.kind==='actor')return X.blocking;if(it.kind==='cable')return X.power;return true;}const L=LIB[it.t];if(!L)return false;if(L.kind==='talent'||L.kind==='mark')return X.blocking;if(L.kind==='grip')return X.grip;if(L.kind==='power')return X.power;return true;});}
@@ -2557,7 +2656,8 @@ function buildSheet0(sc,su,sh,X){
   const Wd=1650,Ht=1275;const items=sheetItems(su,sh,X);const nums=lightNumbers(items);
   const hasShot=X.f_size||X.f_move||X.f_cam||X.f_cast||X.f_desc||X.f_blocking||X.f_intent||X.f_notes;
   const side=X.layout==='sheet'&&(sh._setup||hasShot||X.f_scene||X.f_script||X.lightKey||X.powerBlock||X.legend);
-  const DX=30,DY=X.header?110:30,DW=side?1060:Wd-60,DH=Ht-DY-48;
+  const K=X.sideText==='std'?1:X.sideText==='xl'?1.36:1.2,CW=500*K;
+  const DX=30,DY=X.header?110:30,DW=side?Math.round(Wd-30-CW-30-DX):Wd-60,DH=Ht-DY-48;
   const b=bbox(items,2.5);const s=Math.min(DW/(b.x1-b.x0),DH/(b.y1-b.y0));const px=1/s;
   const ox=DX+(DW-(b.x1-b.x0)*s)/2,oy=DY+(DH-(b.y1-b.y0)*s)/2;
   const vx0=b.x0-(ox-DX)/s,vy0=b.y0-(oy-DY)/s,vx1=vx0+DW/s,vy1=vy0+DH/s;
@@ -2566,14 +2666,14 @@ function buildSheet0(sc,su,sh,X){
   g+=assemble(renderItems(items,{C,px,nums,beams:X.beams,labels:X.labels==='min'?'min':'full',labAuto:X.labels!=='full'&&X.labels!=='min',dims:X.dims,tag:'sheet'}));
   const pw=powerFor(items);const S=P.settings;const cont=S.volts*S.breaker*.8;
   const F="Lato,Helvetica,Arial,sans-serif",M="'Courier New',Courier,monospace",G="'EB Garamond',Garamond,Georgia,serif";
-  let t='';const RX=1120,RW=500;let y=DY;const YMAX=Ht-(X.legend?78:24);
+  let t='';const RX=1120,RW=500;let y=DY;const HtI=DY+(Ht-DY)/K;const YMAX=HtI-(X.legend?78:24);
   const txt=(x,y,s,o)=>`<text x="${x}" y="${y}" font-family="${o&&o.mono?M:o&&o.gar?G:F}" font-size="${(o&&o.size)||13}" font-weight="${o&&o.gar?500:(o&&o.w)||400}" fill="${(o&&o.c)||T.ink}" ${o&&o.anchor?`text-anchor="${o.anchor}"`:''}>${esc(s)}</text>`;
   let head='';
   if(X.header)head=`<rect x="0" y="0" width="${Wd}" height="86" fill="${T.head}"/>`+txt(30,38,P.title,{size:28,gar:1,c:'#fff'})+`<text x="30" y="65" font-size="15" fill="#f0935a"><tspan font-family="${G}" font-weight="500" font-size="17">Lighting plot · Scene ${esc(sc.num)}</tspan><tspan font-family="${M}" font-size="13" dx="12">${esc(sceneHeading(sc))}</tspan></text>`+`<text x="${Wd/2}" y="50" text-anchor="middle" font-family="'EB Garamond',Garamond,Georgia,serif" font-style="italic" font-size="22" fill="#f3e9d7">Clementine Films</text>`
      +txt(Wd-30,38,sh._setup?su.name:`Shot ${sh.num}`,{size:30,gar:1,c:'#fff',anchor:'end'})+txt(Wd-30,64,sh._setup?`Setup page · ${su.shots.length} shot${su.shots.length===1?'':'s'} · ${new Date().toLocaleDateString()}`:`${su.name} · ${new Date().toLocaleDateString()}`,{size:13,c:'#aab1bb',anchor:'end'})+(X._pg?txt(Wd/2,74,X._pg,{size:12,c:'#aab1bb',anchor:'middle'}):'');
   let frame=`<rect x="${DX}" y="${DY}" width="${DW}" height="${DH}" fill="none" stroke="${T.rule}"/>`;
-  frame+=txt(DX+8,DY+DH+22,[X.grid?'Grid: 1 square = 1 ft · bold lines every 5 ft':'',sh._setup?'Every camera position in this setup, labelled by shot':X.ghost&&su.shots.length>1?`faded cameras = other shots in ${su.name}`:'',!X.header?`${P.title} · Sc ${sc.num} · ${sh._setup?su.name:'Shot '+sh.num}${X._pg?' · '+X._pg:''}`:''].filter(Boolean).join(' · '),{size:11,c:T.sub});
-  frame+=txt(DX+8,DY+DH+38,'Planning reference for placement only. Not an exact representation of the lighting or framing on set.',{size:11,c:T.sub});
+  frame+=txt(DX+8,DY+DH+21,[X.grid?'Grid: 1 square = 1 ft · bold lines every 5 ft':'',sh._setup?'Every camera position in this setup, labelled by shot':X.ghost&&su.shots.length>1?`faded cameras = other shots in ${su.name}`:'',!X.header?`${P.title} · Sc ${sc.num} · ${sh._setup?su.name:'Shot '+sh.num}${X._pg?' · '+X._pg:''}`:''].filter(Boolean).join(' · '),{size:11,c:T.sub});
+  frame+=txt(DX+8,DY+DH+39,'Planning reference for placement only. Not an exact representation of the lighting or framing on set.',{size:12,c:T.sub});
   if(side){
     const room=n=>y+n<=YMAX;
     const sec=(title)=>{if(!room(60))return false;t+=`<rect x="${RX}" y="${y}" width="${RW}" height="24" fill="${T.band}"/>`+txt(RX+10,y+17,title,{size:15,gar:1,c:T.ink});y+=42;return true;};
@@ -2613,11 +2713,11 @@ function buildSheet0(sc,su,sh,X){
       ['Electric','Grip','Power & distro','Camera','Camera support','Sound'].forEach(c=>{if(!cats[c])return;const lines=wrapText(cats[c].sort((a,b)=>a.name.localeCompare(b.name)).map(v=>`${v.q}× ${v.name.replace(/ \(.*\)/,'')}`).join(', '),62);
         if(!room(18))return;t+=txt(RX+10,y,c,{size:12,c:T.sub});lines.slice(0,4).forEach((l,i)=>{if(!room(4))return;t+=txt(RX+130,y,(i===3&&lines.length>4)?l+' …':l,{size:11.5});y+=16;});y+=5;});
       if(!Object.keys(cats).length){t+=txt(RX+10,y,'Nothing placed yet.',{size:12,c:T.sub});y+=20;}}
-    if(X.legend){t+=txt(RX,Ht-62,'LEGEND',{size:10.5,w:700,c:T.sub});
-      const lg=[['#f2a93b','Tungsten'],['#9fc8ff','HMI'],['#9fe8de','LED'],['#d1b8ff','Fluor.'],['#5cb8ff','Camera'],['#f08c3c','Power']];lg.forEach(([c,n],i)=>{t+=`<rect x="${RX+i*82}" y="${Ht-52}" width="12" height="12" fill="${c}"/>`+txt(RX+i*82+17,Ht-42,n,{size:11});});
-      t+=txt(RX,Ht-20,'Numbered marks on actor paths = blocking positions in order · dashed blue = camera move',{size:10.5,c:T.sub});}
+    if(X.legend){t+=txt(RX,HtI-62,'LEGEND',{size:10.5,w:700,c:T.sub});
+      const lg=[['#f2a93b','Tungsten'],['#9fc8ff','HMI'],['#9fe8de','LED'],['#d1b8ff','Fluor.'],['#5cb8ff','Camera'],['#f08c3c','Power']];lg.forEach(([c,n],i)=>{t+=`<rect x="${RX+i*82}" y="${HtI-52}" width="12" height="12" fill="${c}"/>`+txt(RX+i*82+17,HtI-42,n,{size:11});});
+      t+=txt(RX,HtI-20,'Numbered marks on actor paths = blocking positions in order · dashed blue = camera move',{size:10.5,c:T.sub});}
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${Wd}" height="${Ht}" viewBox="0 0 ${Wd} ${Ht}"><rect width="${Wd}" height="${Ht}" fill="${T.bg}"/><defs><style>${BRANDFF}</style><clipPath id="dclip"><rect x="${DX}" y="${DY}" width="${DW}" height="${DH}"/></clipPath></defs><g clip-path="url(#dclip)"><g transform="translate(${ox} ${oy}) scale(${s}) translate(${-b.x0} ${-b.y0})">${g}</g></g>${head}${frame}${t}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${Wd}" height="${Ht}" viewBox="0 0 ${Wd} ${Ht}"><rect width="${Wd}" height="${Ht}" fill="${T.bg}"/><defs><style>${BRANDFF}</style><clipPath id="dclip"><rect x="${DX}" y="${DY}" width="${DW}" height="${DH}"/></clipPath></defs><g clip-path="url(#dclip)"><g transform="translate(${ox} ${oy}) scale(${s}) translate(${-b.x0} ${-b.y0})">${g}</g></g>${head}${frame}<g transform="matrix(${K},0,0,${K},${(Wd-30-CW)-K*RX},${DY-K*DY})">${t}</g></svg>`;
 }
 function svgToPng(svg,scale){scale=scale||1.5;return new Promise((res,rej)=>{const img=new Image();const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));img.onload=()=>{const c=document.createElement('canvas');c.width=1650*scale;c.height=1275*scale;const x=c.getContext('2d');x.scale(scale,scale);x.drawImage(img,0,0,1650,1275);URL.revokeObjectURL(url);c.toBlob(b=>b?res(b):rej('png'),'image/png');};img.onerror=()=>{URL.revokeObjectURL(url);rej('img');};img.src=url;});}
 async function exportOne(sc,su,sh,X){const svg=buildSheet(sc,su,sh,X);const name=`${slug(P.title)}_sc${slug(sc.num)}_shot-${slug(sh.num)}`;
@@ -2632,15 +2732,16 @@ function exportRows(X){const sc0=scene(),su0=setup(),sh0=shot();const all=allSho
   if(X.scope==='shot')rows=all.filter(r=>r.sh.id===sh0.id);
   else if(X.scope==='setup')rows=all.filter(r=>r.su.id===su0.id);
   else if(X.scope==='scene')rows=all.filter(r=>r.sc.id===sc0.id);
+  else if(X.scope==='day')rows=all.filter(r=>X.dayId&&r.sh.day===X.dayId);
   else if(X.scope==='pick'){const pk=X.pick||sc0.setups.flatMap(su=>su.shots.map(s=>s.id));rows=all.filter(r=>pk.includes(r.sh.id));}
   else rows=all;
   if(X.order==='script'){const sIx=new Map(P.scenes.map((s,i)=>[s.id,i]));const firstLine=sh=>{const c=(sh.cover||[])[0];if(c==null)return 1e12;if(typeof c==='number')return c;return +(c.o0!=null?c.o0:c.start!=null?c.start:c.line!=null?c.line:1e12)||1e12;};
     rows=rows.slice().sort((a,b)=>(sIx.get(a.sc.id)-sIx.get(b.sc.id))||(firstLine(a.sh)-firstLine(b.sh))||natCmp(a.sh.num,b.sh.num));}
   return rows;}
 // page plan: [{kind,...}]
-function exportPlan(X){const rows=exportRows(X);const multi=X.scope!=='shot'&&rows.length>0;const body=[];
-  if(X.order==='script'){let curSc=null;rows.forEach(r=>{if(r.sc!==curSc){curSc=r.sc;if(multi&&X.setupPages){const sus=[];rows.forEach(q=>{if(q.sc===r.sc&&!sus.includes(q.su))sus.push(q.su);});sus.forEach(su=>body.push({kind:'setup',sc:r.sc,su}));}}body.push({kind:'shot',...r});});}
-  else{let curSu=null;rows.forEach(r=>{if(r.su!==curSu){curSu=r.su;if(multi&&X.setupPages)body.push({kind:'setup',sc:r.sc,su:r.su});}body.push({kind:'shot',...r});});}
+function exportPlan(X){const rows=exportRows(X);const multi=X.scope!=='shot'&&rows.length>0;const body=[];const inRows=new Set(rows.map(r=>r.sh.id));const suPart=su=>su.shots.every(s=>inRows.has(s.id))?su:Object.assign({},su,{shots:su.shots.filter(s=>inRows.has(s.id))});
+  if(X.order==='script'){let curSc=null;rows.forEach(r=>{if(r.sc!==curSc){curSc=r.sc;if(multi&&X.setupPages){const sus=[];rows.forEach(q=>{if(q.sc===r.sc&&!sus.includes(q.su))sus.push(q.su);});sus.forEach(su=>body.push({kind:'setup',sc:r.sc,su:suPart(su)}));}}body.push({kind:'shot',...r});});}
+  else{let curSu=null;rows.forEach(r=>{if(r.su!==curSu){curSu=r.su;if(multi&&X.setupPages)body.push({kind:'setup',sc:r.sc,su:suPart(r.su)});}body.push({kind:'shot',...r});});}
   const front=[];
   if(multi&&X.overview){const n=+X.ovN||6;for(let i=0;i<rows.length;i+=n)front.push({kind:'overview',cells:rows.slice(i,i+n)});}
   let nc=0;if(multi&&X.contents){let lines=0,last=null;body.forEach(p=>{if(p.sc!==last){last=p.sc;lines++;}lines++;});nc=Math.max(1,Math.ceil(lines/CT_ROWS));}
@@ -2648,7 +2749,7 @@ function exportPlan(X){const rows=exportRows(X);const multi=X.scope!=='shot'&&ro
   pages.forEach((p,i)=>p.no=i+1);return {pages,rows};}
 const CT_ROWS=32;
 function pageTheme(X){const dark=X.theme==='dark';return dark?{bg:'#15171a',ink:'#e3e6ea',sub:'#8d949e',band:'#23272c',rule:'#3a3f46',head:'#0c0d0f'}:{bg:'#ffffff',ink:'#1d2024',sub:'#6b7280',band:'#f1f3f5',rule:'#c9ced5',head:'#16181b'};}
-function scopeLabel(X,rows){const scs=[...new Set(rows.map(r=>r.sc))];return X.scope==='project'?'Whole project':X.scope==='setup'?`Scene ${scs[0]?scs[0].num:''} · ${rows[0]?rows[0].su.name:''}`:X.scope==='pick'?`${rows.length} chosen shot${rows.length===1?'':'s'}`:`Scene ${scs.map(s=>s.num).join(', ')}`;}
+function scopeLabel(X,rows){const scs=[...new Set(rows.map(r=>r.sc))];return X.scope==='day'?(typeof dayLabel==='function'?dayLabel(dayById(X.dayId),true):'Shooting day'):X.scope==='project'?'Whole project':X.scope==='setup'?`Scene ${scs[0]?scs[0].num:''} · ${rows[0]?rows[0].su.name:''}`:X.scope==='pick'?`${rows.length} chosen shot${rows.length===1?'':'s'}`:`Scene ${scs.map(s=>s.num).join(', ')}`;}
 function pageFrame(X,title,right,sub,pg){const T=pageTheme(X);const Wd=1650,Ht=1275;const F="Lato,Helvetica,Arial,sans-serif",G="'EB Garamond',Garamond,Georgia,serif";
   const txt=(x,y,s,o)=>`<text x="${x}" y="${y}" font-family="${o&&o.mono?"'Courier New',Courier,monospace":o&&o.gar?G:F}" font-size="${(o&&o.size)||13}" font-weight="${o&&o.gar?500:(o&&o.w)||400}" ${o&&o.it?'font-style="italic"':''} fill="${(o&&o.c)||T.ink}" ${o&&o.anchor?`text-anchor="${o.anchor}"`:''}>${esc(s)}</text>`;
   const head=`<rect x="0" y="0" width="${Wd}" height="86" fill="${T.head}"/>`+txt(30,38,P.title,{size:28,gar:1,c:'#fff'})+txt(30,65,sub,{size:17,gar:1,c:'#f0935a'})
@@ -2660,7 +2761,7 @@ function pageFrame(X,title,right,sub,pg){const T=pageTheme(X);const Wd=1650,Ht=1
 function contentsSVG(X,plan,part){const {pages,rows}=plan;const total=pages.length;const nc=pages.filter(p=>p.kind==='contents').length;
   const sus=new Set(rows.map(r=>r.su));const {T,txt,wrap}=pageFrame(X,nc>1?`Contents ${part+1}/${nc}`:'Contents',`${rows.length} shot${rows.length===1?'':'s'} · ${sus.size} setup${sus.size===1?'':'s'} · ${new Date().toLocaleDateString()}`,`Shot list · ${scopeLabel(X,rows)}`,`Page ${part+1} of ${total}`);
   const C=[['PAGE',30],['SC',100],['SETUP',150],['SHOT',330],['SIZE · ANGLE',410],['MOVE',620],['LENS',780],['DESCRIPTION',930],['CAST',1400]];
-  let g=txt(30,122,(X.order==='script'?'Script order':'Shooting order — grouped by setup')+(X.setupPages?' · each setup opens with a page showing every camera position, its lights, power and gear':''),{size:12.5,c:T.sub,it:1});
+  const dNote=X.scope==='day'&&dayById(X.dayId)&&dayById(X.dayId).note?dayById(X.dayId).note+'  ·  ':'';let g=txt(30,122,dNote+(X.order==='script'?'Script order':'Shooting order — grouped by setup')+(X.setupPages?' · each setup opens with a page showing every camera position, its lights, power and gear':''),{size:12.5,c:T.sub,it:1});
   g+=`<rect x="20" y="140" width="1610" height="30" fill="${T.band}"/>`+C.map(([h,x])=>txt(x,160,h,{size:10.5,w:700,c:T.sub})).join('');
   const lines=[];let last=null;pages.filter(p=>p.kind==='setup'||p.kind==='shot').forEach(p=>{if(p.sc!==last){last=p.sc;lines.push({scene:p.sc});}lines.push(p);});
   const links=[];let y=198;const cut=(s,n)=>!s?'':s.length>n?s.slice(0,n-1)+'…':s;
@@ -2711,7 +2812,7 @@ async function makeExportPDF(X,onPage){const plan=exportPlan(X);const {pages}=pl
   return {blob:await buildPDF(out,P.title+' — Lighting plot'),plan};}
 async function runExport(){const X=xo();
   if(X.format==='pdf'){const rows=exportRows(X);if(!rows.length){toast('No shots chosen');return;}
-    try{const {blob,plan}=await makeExportPDF(X,(i,n)=>toast(`Building page ${i} of ${n}…`));const tag=X.scope==='shot'?`_sc${slug(scene().num)}_shot-${slug(shot().num)}`:X.scope==='project'?'_all-shots':X.scope==='pick'?'_selected-shots':X.scope==='setup'?`_sc${slug(scene().num)}_${slug(setup().name)}`:`_sc${slug(scene().num)}`;
+    try{const {blob,plan}=await makeExportPDF(X,(i,n)=>toast(`Building page ${i} of ${n}…`));const tag=X.scope==='shot'?`_sc${slug(scene().num)}_shot-${slug(shot().num)}`:X.scope==='project'?'_all-shots':X.scope==='day'?'_'+slug((dayById(X.dayId)||{}).name||'day'):X.scope==='pick'?'_selected-shots':X.scope==='setup'?`_sc${slug(scene().num)}_${slug(setup().name)}`:`_sc${slug(scene().num)}`;
       if(await saveOut(`${slug(P.title)}${tag}.pdf`,blob))toast(`PDF ready · ${plan.pages.length} page${plan.pages.length===1?'':'s'}`);else toast('Export cancelled');}catch(e){console.error(e);toast('PDF export failed');}return;}
   if(X.scope==='shot'){await exportOne(scene(),setup(),shot(),X);return;}
   const rows=exportRows(X);let n=0;for(const r of rows){if(await exportOne(r.sc,r.su,r.sh,X))n++;else{toast(n?`Stopped after ${n} sheet${n>1?'s':''}`:'Export cancelled');return;}}toast(`${n} sheet${n===1?'':'s'} exported`);}
@@ -2722,7 +2823,8 @@ function openExport(){
   const LAY=[['grid','Grid'],['beams','Light beams'],['dims','Wall sizes'],['ghost','Other shots’ cameras (faded)'],['blocking','Actors, marks & actor moves'],['grip','Grip'],['power','Power & cable runs']];
   const draw=()=>{const X=xo();const chk=([k,l],cls)=>`<label class="chk ${cls||''}"><input type="checkbox" data-xk="${k}" ${X[k]?'checked':''}> ${l}</label>`;const seg=(k,opts)=>`<div class="seg">${opts.map(([v,l])=>`<button data-xs="${k}" data-v="${v}" class="${String(X[k])===String(v)?'on':''}">${l}</button>`).join('')}</div>`;
     openModal(`<h3>Export shot sheets</h3><div class="xGrid"><div class="xOpts ${X.layout==='diagram'?'dis':''}">
-      <div class="xSec">What to export</div>${seg('scope',[['shot','This shot'],['setup','This setup'],['scene','This scene'],['project','Whole project'],['pick','Choose…']])}
+      <div class="xSec">What to export</div>${seg('scope',[['shot','This shot'],['setup','This setup'],['scene','This scene'],...((P.days||[]).length?[['day','Shooting day']]:[]),['project','Whole project'],['pick','Choose…']])}
+      ${X.scope==='day'?`<select class="in" data-xsel="dayId" style="margin-top:6px"><option value="">Pick a day…</option>${(P.days||[]).map(d=>`<option value="${d.id}" ${X.dayId===d.id?'selected':''}>${esc(dayLabel(d))} — ${shotsOnDay(d.id).length} shots</option>`).join('')}</select>`:''}${(P.days||[]).length?'':'<div class="pSub" style="margin-top:4px">Add shooting days (Breakdown ▸ Days) to export by day.</div>'}
       ${X.scope==='pick'?pickList(X):''}
       <div class="xSec">Format</div>${seg('format',[['pdf','PDF'],['png','PNG'],['svg','SVG (vector)']])}${X.format!=='svg'?seg('scale',[[1,'Small'],[1.5,'Standard'],[2,'High-res']]):''}
       ${X.format==='pdf'&&X.scope!=='shot'?`<div class="xSec">PDF pages</div>${seg('order',[['shoot','Shooting order'],['script','Script order']])}<div class="pSub" style="margin:2px 0 6px">${X.order==='script'?'Shots follow the script. Setup pages sit at the start of each scene.':'Shots are grouped by setup, the way you’ll shoot them.'}</div>
@@ -2730,14 +2832,14 @@ function openExport(){
       ${X.format!=='pdf'&&X.scope!=='shot'?`<div class="pSub" style="margin-top:6px">Saves one ${X.format.toUpperCase()} per shot. Choose PDF for a single file with a contents page.</div>`:''}
       
       
-      <div class="xSec">Sheet layout</div>${seg('layout',[['sheet','Diagram + info'],['diagram','Diagram only']])}${seg('theme',[['paper','White (print)'],['dark','Dark']])}
+      <div class="xSec">Sheet layout</div>${seg('layout',[['sheet','Diagram + info'],['diagram','Diagram only']])}${seg('theme',[['paper','White (print)'],['dark','Dark']])}<div class="pSub" style="margin:6px 0 2px">Text size beside the diagram</div>${seg('sideText',[['std','Standard'],['lg','Large'],['xl','Extra large']])}
       <div class="xSec">On the diagram</div>${LAY.map(x=>chk(x)).join('')}<div style="height:6px"></div>${seg('labels',[['auto','Auto'],['full','Full'],['min','Numbers only']])+`<div class="pSub" style="margin-top:4px">Auto keeps every label it can place clearly and shows just the number for the few it can’t. Their details are in the light key.</div>`}
       <div class="xSec">Info fields <button class="addMini" data-xall="1" style="margin-left:6px">all</button> <button class="addMini" data-xall="0">none</button></div>${chk(INFO[0])}${INFO.slice(1).map(x=>chk(x,'infoF')).join('')}
       </div><div class="xPrev"><img id="xImg" alt="Preview of the exported sheet"><div class="pSub" style="margin-top:6px">${X.format==='pdf'?(()=>{const pl=exportPlan(X);return `This PDF: <b>${pl.pages.length} page${pl.pages.length===1?'':'s'}</b> · ${pl.rows.length} shot${pl.rows.length===1?'':'s'}${pl.pages.some(p=>p.kind==='setup')?` · ${pl.pages.filter(p=>p.kind==='setup').length} setup page${pl.pages.filter(p=>p.kind==='setup').length===1?'':'s'}`:''}. `;})():''}Preview of shot ${esc(shot().num)}. Your choices are remembered for this project.</div></div></div>
       <div class="mFoot"><button class="btn" data-close>Cancel</button><button class="btn pri" id="xGo">${X.format==='pdf'?'Export PDF':X.scope==='shot'?'Export '+X.format.toUpperCase():'Export '+exportRows(X).length+' '+X.format.toUpperCase()+'s'}</button></div>`,'wide');
     $('#xImg').src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(buildSheet(scene(),setup(),shot(),X));
     const mb=$('#modalBox');const keep=()=>{const o=mb.querySelector('.xOpts');return o?o.scrollTop:0;};const set=(k,v)=>{const st=keep();P.exportOpts=Object.assign(xo(),{[k]:v});scheduleSave();draw();const o=$('#modalBox .xOpts');if(o)o.scrollTop=st;};
-    mb.onchange=e=>{const pk=e.target.dataset.pk;if(pk){const X2=xo();let cur=X2.pick||scene().setups.flatMap(su=>su.shots.map(s=>s.id));const ids=pk.split(',');cur=e.target.checked?[...new Set(cur.concat(ids))]:cur.filter(i=>!ids.includes(i));set('pick',cur);return;}const k=e.target.dataset.xk;if(k)set(k,e.target.checked);};
+    mb.onchange=e=>{if(e.target.dataset.xsel){set(e.target.dataset.xsel,e.target.value);return;}const pk=e.target.dataset.pk;if(pk){const X2=xo();let cur=X2.pick||scene().setups.flatMap(su=>su.shots.map(s=>s.id));const ids=pk.split(',');cur=e.target.checked?[...new Set(cur.concat(ids))]:cur.filter(i=>!ids.includes(i));set('pick',cur);return;}const k=e.target.dataset.xk;if(k)set(k,e.target.checked);};
     mb.onclick=e=>{const b=e.target.closest('[data-xs]');if(b){const k=b.dataset.xs;if(k==='scope'&&b.dataset.v!=='shot'&&xo().format==='png')P.exportOpts=Object.assign(xo(),{format:'pdf'});set(k,k==='scale'||k==='ovN'?+b.dataset.v:b.dataset.v);return;}
       const a=e.target.closest('[data-xall]');if(a){const st=keep();const on=a.dataset.xall==='1';const X2=xo();INFO.slice(1).forEach(([k])=>X2[k]=on);P.exportOpts=X2;scheduleSave();draw();const o=$('#modalBox .xOpts');if(o)o.scrollTop=st;return;}
       if(e.target.id==='xGo'){closeModal();runExport();}};};
