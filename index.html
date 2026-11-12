@@ -256,6 +256,24 @@ body.narrow #left{left:0} body.narrow #right{right:0}
 .pickList{max-height:200px;overflow:auto;border:1px solid var(--line,#333);border-radius:6px;padding:6px 8px;margin-top:6px}
 .pickList .pkSc{margin-top:4px}.pickList .pkSu{font-size:11px;color:var(--sub);margin:4px 0 2px 22px}
 .pickList .pkShots{display:flex;flex-wrap:wrap;gap:2px 12px;margin-left:22px}.pickList .pkShots .chk{margin:0}
+
+#bTheme{display:inline-flex;align-items:center;justify-content:center;padding-left:8px;padding-right:8px}
+:root[data-theme="light"]{color-scheme:light;--bg:#e9ecef;--panel:#f7f8fa;--panel2:#eef0f3;--line:#d5d9df;--line2:#c3c9d0;--text:#1c2128;--sub:#5b6470;--dim:#8a929c;
+  --amber:#f2a93b;--amber2:#b45309;--teal:#0f8f84;--blue:#1f6fbf;--red:#d33a3a;--green:#2f8f46;--violet:#7048e8}
+:root[data-theme="light"] .cf{color:#bd5103}
+:root[data-theme="light"] .btn:hover{border-color:#a9b0b9;background:#e3e6ea}
+:root[data-theme="light"] .menu button:hover,:root[data-theme="light"] .tool.on,:root[data-theme="light"] .seg button.on{background:#e1e4e8}
+:root[data-theme="light"] .sRow.cur,:root[data-theme="light"] .slWrap tr.cur td{background:#e3e6ea}
+:root[data-theme="light"] .shotChip:hover,:root[data-theme="light"] .addMini:hover,:root[data-theme="light"] #libSearch:focus,:root[data-theme="light"] .in:focus{border-color:#9aa1aa}
+:root[data-theme="light"] .libItem.on{background:#fdf0dc}
+:root[data-theme="light"] #hint,:root[data-theme="light"] #legendMini{background:rgba(255,255,255,.92)}
+:root[data-theme="light"] .swatch{border-color:rgba(0,0,0,.2)}
+:root[data-theme="light"] .note{background:#fff7ea;color:#3a3f46}
+:root[data-theme="light"] #toast{background:#ffffff;box-shadow:0 4px 16px rgba(0,0,0,.12)}
+:root[data-theme="light"] ::-webkit-scrollbar-thumb{background:#c4c9cf}
+:root[data-theme="light"] #modal{background:rgba(30,35,45,.35)}
+:root[data-theme="light"] #tools,:root[data-theme="light"] #quick,:root[data-theme="light"] #viewBar,:root[data-theme="light"] #calc,:root[data-theme="light"] #layerPop{background:rgba(247,248,250,.97);box-shadow:0 6px 18px rgba(20,30,50,.14)}
+:root[data-theme="light"] #zoomBox{background:var(--panel)}
 </style>
 </head>
 <body>
@@ -286,6 +304,7 @@ body.narrow #left{left:0} body.narrow #right{right:0}
       </div>
     </div>
     <button class="btn" id="bProjects">Projects</button>
+    <button class="btn ghost" id="bTheme" title="Switch light / dark" aria-label="Switch light or dark mode"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.8a6.2 6.2 0 0 1 0 12.4z" fill="currentColor"/></svg></button>
     <button class="btn ghost" id="bHelp" title="Shortcuts & how it works">?</button>
     <button class="btn ghost ico" id="bRight" title="Show or hide details: item, shot, script, power, gear ( ] )"><svg width="16" height="16" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.3"/><rect x="9.5" y="3.5" width="4" height="9" rx="1" fill="currentColor"/></svg></button>
   </header>
@@ -996,7 +1015,7 @@ function snapItemPos(it,p,alt,excl){
 
 function renderCanvas(){
   if(!P)return;
-  const C=THEMES.dark,px=1/V.zoom;const w=CW/V.zoom,h=CH/V.zoom;
+  const C=uiC(),px=1/V.zoom;const w=CW/V.zoom,h=CH/V.zoom;
   cv.setAttribute('viewBox',`${V.vx} ${V.vy} ${w} ${h}`);
   const su=setup(),sh=shot();const items=activeItems(su,sh);const nums=lightNumbers(items);const ids=selIds();
   let out=`<rect x="${V.vx}" y="${V.vy}" width="${w}" height="${h}" fill="${C.bg}" data-bg="1"/>`+gridSVG(V.vx,V.vy,V.vx+w,V.vy+h,C,px);
@@ -1021,7 +1040,7 @@ function renderCanvas(){
     V.draft.pts.forEach(q=>{out+=`<circle cx="${q.x}" cy="${q.y}" r="${3.5*px}" fill="#f2a93b" pointer-events="none"/>`;});}
   if(V.roomDraft){const a=V.roomDraft.a,b=V.roomDraft.b;const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),rw=Math.abs(b.x-a.x),rh=Math.abs(b.y-a.y);
     out+=`<rect x="${x}" y="${y}" width="${rw}" height="${rh}" fill="#f2a93b" fill-opacity=".06" stroke="${C.wall}" stroke-width=".38" opacity=".85" pointer-events="none"/>`+dimLabels([{x,y},{x:x+rw,y},{x:x+rw,y:y+rh}],C,px,true)
-      +(rw>.5&&rh>.5?`<text x="${x+rw/2}" y="${y+rh/2}" dy=".35em" text-anchor="middle" font-family="${C.mono}" font-size="${12*px}" font-weight="600" fill="#ffcf7a" pointer-events="none">${fmtFt(rw)} × ${fmtFt(rh)}</text>`:'');}
+      +(rw>.5&&rh>.5?`<text x="${x+rw/2}" y="${y+rh/2}" dy=".35em" text-anchor="middle" font-family="${C.mono}" font-size="${12*px}" font-weight="600" fill="${C.hot||'#ffcf7a'}" pointer-events="none">${fmtFt(rw)} × ${fmtFt(rh)}</text>`:'');}
   if(V.placing&&V.ghostPos){const gi=ghostItem(V.ghostPos);const L3=renderItems([gi],{C,px,nums:{[gi.id]:'+'},beams:true,labels:'min'});out+=`<g pointer-events="none" opacity=".55">${assemble(L3).replace(/data-id="[^"]*"/g,'')}</g>`;if(LIB[gi.t].kind==='set'&&LIB[gi.t].shape!=='north')out+=sizeTag(gi,C,px);}
   if(V.marq){const a=V.marq.a,b=V.marq.b;out+=`<rect x="${Math.min(a.x,b.x)}" y="${Math.min(a.y,b.y)}" width="${Math.abs(b.x-a.x)}" height="${Math.abs(b.y-a.y)}" fill="#5cb8ff" fill-opacity=".08" stroke="#5cb8ff" stroke-width="${px}" stroke-dasharray="${4*px} ${3*px}" pointer-events="none"/>`;}
   (V.guides||[]).forEach(g=>{const dx=g.x2-g.x1,dy=g.y2-g.y1;const l=Math.hypot(dx,dy)||1;const e=1.2;out+=`<line x1="${g.x1-dx/l*e}" y1="${g.y1-dy/l*e}" x2="${g.x2+dx/l*e}" y2="${g.y2+dy/l*e}" stroke="#ff5fa2" stroke-width="${1.2*px}" stroke-dasharray="${5*px} ${4*px}" pointer-events="none"/>`;});
@@ -1033,7 +1052,7 @@ function renderCanvas(){
 }
 V.lastRot={};
 function sizeTag(it,C,px){const L=LIB[it.t];const t=L.wallSnap?fmtFt(+it.w||0)+' wide':`${fmtFt(+it.w||0)} × ${fmtFt(+it.h||0)}`;const ra=(it.r||0)*D2R;const off=(L.wallSnap?Math.abs(Math.sin(ra))*(+it.w||1)/2+.4:Math.abs(Math.sin(ra))*(+it.w||1)/2+Math.abs(Math.cos(ra))*(+it.h||1)/2)+15*px;
-  return `<text x="${it.x}" y="${it.y+off}" dy=".35em" text-anchor="middle" font-family="${C.mono}" font-size="${11*px}" font-weight="700" fill="#ffcf7a" paint-order="stroke" stroke="${C.bg}" stroke-width="${3.5*px}" pointer-events="none">${t}</text>`;}
+  return `<text x="${it.x}" y="${it.y+off}" dy=".35em" text-anchor="middle" font-family="${C.mono}" font-size="${11*px}" font-weight="700" fill="${C.hot||'#ffcf7a'}" paint-order="stroke" stroke="${C.bg}" stroke-width="${3.5*px}" pointer-events="none">${t}</text>`;}
 function ghostItem(pos){const k=V.placing;const gi=newItem(k,pos.x,pos.y,{});gi.r=V.lastRot[k]!=null?V.lastRot[k]:(libOf(k).kind==='camera'?-90:0);if(libOf(k).wallSnap&&!V.altDown)snapToWall(gi,pos);return gi;}
 function ghostPosFor(w,alt){const k=V.placing;const gi=newItem(k,w.x,w.y,{});gi.r=V.lastRot[k]!=null?V.lastRot[k]:(libOf(k).kind==='camera'?-90:0);return snapItemPos(gi,w,alt);}
 function handleR(it){const L=LIB[it.t];if(!L)return 1.5;if(L.kind==='set')return Math.max(it.w||1,it.h||1)/2+1;if(it.t==='frame')return (it.orient==='Overhead'?(FRAME_SIZES[it.size]||6)/2:0)+1.6;if(L.kind==='light')return (L.s||1)+1.1;if(L.shape==='jib'||L.shape==='boom')return 2;return 1.8;}
@@ -1230,7 +1249,7 @@ function renderQuick(){const q=$('#quick');if(!q||fromQuick)return;const ids=P?s
    Library panel
    ============================================================ */
 function libIcon(key){
-  const C=THEMES.dark;let inner;
+  const C=uiC();let inner;
   if(LINES[key]){const it={t:'line',kind:key,pts:[{x:-1.3,y:.6},{x:1.3,y:-.6}],color:LINES[key].color};const L1={floor:'',set:'',beams:'',lines:'',grip:'',lights:'',cam:'',talent:'',labels:''};drawLine(it,L1,{C,px:.08,ghost:false},false);inner=(L1.floor+L1.set+L1.lines).replace(/data-id="[^"]*"/g,'');return `<svg viewBox="-1.6 -1.2 3.2 2.4">${inner}</svg>`;}
   const L=libOf(key);const it=newItem(key,0,0,{});if(L.kind==='set'){const m=Math.max(it.w,it.h);it.w=it.w/m*2.2;it.h=it.h/m*2.2;}
   if(it.t==='frame'){it.size='4×4';}
@@ -2415,6 +2434,12 @@ calcDofHTML=function(){const D=CALC.dof;const cs=camsNow();if(!D.sensor)seedDof(
 $('#calc').addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.c;if(k==='dof.cam'){if(e.target.value!=='manual')seedDof(e.target.value);renderCalc();renderCanvas();}});
 $('#calc').addEventListener('click',e=>{const b=e.target.closest('[data-dofsub],[data-dofseed]');if(!b)return;if(b.dataset.dofsub)CALC.dof.two=b.dataset.dofsub==='2';else seedDof(CALC.dof.cam);renderCalc();renderCanvas();});
 {const _gl=gripLabel;gripLabel=function(it){let t=_gl(it);if(it.t==='bounce'&&it.fabric&&it.size&&String(it.fabric).indexOf(it.size)===0)t=t.replace(it.size+' ','');return t;};}
+
+// ---- Light / dark mode ----
+function uiC(){return document.documentElement.dataset.theme==='light'?Object.assign({},THEMES.paper,{hot:'#b45309'}):THEMES.dark;}
+function setTheme(t){if(t==='light')document.documentElement.dataset.theme='light';else delete document.documentElement.dataset.theme;try{localStorage.setItem('lp.theme',t);}catch(e){}renderLib();renderCanvas();}
+(function(){let t='dark';try{t=localStorage.getItem('lp.theme')||'dark';}catch(e){}if(t==='light')document.documentElement.dataset.theme='light';})();
+$('#bTheme').onclick=()=>setTheme(document.documentElement.dataset.theme==='light'?'dark':'light');
 const BRANDFF=(()=>{let o='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.type===5&&/EB Garamond|Lato/.test(r.cssText))o+=r.cssText;}catch(e){}}return o;})();
 /* ============================================================
    Export
