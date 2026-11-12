@@ -248,6 +248,9 @@ body.narrow #left{left:0} body.narrow #right{right:0}
 #calc svg.sky{width:100%;height:auto;display:block;border-radius:8px;background:#14171a;touch-action:none;cursor:ew-resize}
 #bCalc.on{background:var(--amber);border-color:var(--amber);color:#fff}
 @media (max-width:640px){#calc{bottom:96px;left:6px;right:6px;max-height:60%}}
+#layerPop{position:absolute;left:10px;bottom:52px;background:rgba(23,25,28,.98);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;z-index:7;display:none;box-shadow:0 14px 34px rgba(0,0,0,.5)}
+#layerPop.open{display:block}
+@media (max-width:640px){#layerPop{bottom:96px}}
 </style>
 </head>
 <body>
@@ -344,8 +347,8 @@ function hex2rgb(h){h=(h||'#ffffff').replace('#','');if(h.length===3)h=h.split('
 /* ============================================================
    Reference data
    ============================================================ */
-const GELS={'None':0,'1/8 CTO':20,'1/4 CTO':42,'1/2 CTO':81,'3/4 CTO':131,'Full CTO':159,'1/8 CTB':-12,'1/4 CTB':-30,'1/2 CTB':-68,'Full CTB':-131,'Plus Green':'g','Minus Green':'m','Color gel (custom)':'c'};
-const MODS=['None','Barn doors','Softbox','Softbox + grid','Lantern skirt','Dome / diffuser','Fresnel attachment','Snoot','Spot / projection','216 diffusion','250 diffusion','Opal'];
+const GELS={'None':0,'1/8 CTO':20,'1/4 CTO':42,'1/2 CTO':81,'3/4 CTO':131,'Full CTO':159,'1/8 CTB':-12,'1/4 CTB':-30,'1/2 CTB':-68,'3/4 CTB':-100,'Full CTB':-131,'1/4 CTS':42,'1/2 CTS':81,'Full CTS':159,'Plus Green':'g','Minus Green':'m','Color gel (custom)':'c'};
+const MODS=['None','Barn doors','Snoot','Egg crate / grid','Black wrap','Softbox','Softbox + grid','Lantern skirt','Dome / diffuser','Fresnel attachment','Spot / projection'];
 const ROLES=['Key','Fill','Back / Rim','Kicker','Hair','Eye light','Background','Practical','Ambient / Base','Motivated (window)','Motivated (practical)','Effect','Bounce source'];
 const MOUNTS=['C-stand','Light stand (Arri kit)','Beefy baby stand','Pigeon (floor)','Magnet / tape-up','Combo stand','Baby stand','Rolling stand','Menace / boom arm','Overhead / pipe','Floor (turtle)','Clamp / rig','Handheld','Practical (set)','—'];
 const SENSORS={'Sony FS7 II — 4K DCI 17:9 (22.5mm)':22.5,'Sony FS7 II — UHD/HD 16:9 (21.2mm)':21.18,'Super 35 (24.9mm)':24.89,'Full Frame (36mm)':36,'Large Format (36.7mm)':36.7,'APS-C (23.5mm)':23.5,'Micro 4/3 (17.3mm)':17.3,'1-inch (13.2mm)':13.2,'16mm (12.5mm)':12.52};
@@ -365,7 +368,7 @@ const MOVES=['Static','Pan','Tilt','Push in','Pull out','Dolly / track','Arc','C
 const FABRICS=['Full silk','Silver lamé','1/2 silk','1/4 grid cloth','1/2 grid cloth','Full grid cloth','Magic cloth','Ultrabounce','Bleached muslin','Unbleached muslin','Solid (duvetyne)','Single net','Double net'];
 const FLAGTYPES=['Solid flag','Single net','Double net','Silk','Cutter'];
 const FRAME_SIZES={'4×4':4,'6×6':6,'8×8':8,'12×12':12,'20×20':20};
-const FLAG_SIZES={'12×18':1.5,'18×24':2,'40×40 floppy':3.33,'24×36':3,'4×4 floppy':4,'10×42 cutter':3.5,'24×72 cutter':6};
+const FLAG_SIZES={'4×4':4,'12×18':1.5,'18×24':2,'40×40 floppy':3.33,'24×36':3,'4×4 floppy':4,'10×42 cutter':3.5,'24×72 cutter':6};
 const BOUNCE_SIZES={'Flexfill 38″':3.17,'2×2':2,'4×4':4,'4×8':8,'2×3':3};
 const ACTOR_COLORS=['#ff7a7a','#7aa8ff','#ffd166','#7bd88f','#d69bff','#ff9fd0','#66e3e3','#ffa94d'];
 
@@ -485,15 +488,34 @@ const PRESETS={
   k_cstand:{t:'cstand',name:'C-Stand w/ arm & head',cat:'Grip',props:{}},
   k_beefy:{t:'beefy',name:'Beefy Baby Riser Stand',cat:'Grip',props:{}},
   k_pigeon:{t:'pigeon',name:'Pigeon Plate',cat:'Grip',props:{}},
-  k_rr_silk:{t:'frame',name:'4×4 Road Rag — Silk',cat:'Grip',props:{size:'4×4',fabric:'Full silk'}},
-  k_rr_single:{t:'frame',name:'4×4 Road Rag — Single',cat:'Grip',props:{size:'4×4',fabric:'Single net'}},
-  k_rr_solid:{t:'frame',name:'4×4 Road Rag — Flag (solid)',cat:'Grip',props:{size:'4×4',fabric:'Solid (duvetyne)'}},
-  k_rr_lame:{t:'frame',name:'4×4 Road Rag — Silver Lamé',cat:'Grip',props:{size:'4×4',fabric:'Silver lamé'}},
+  k_rr_silk:{t:'frame',name:'4×4 Silk',cat:'Grip',props:{size:'4×4',fabric:'Full silk'}},
+  k_rr_single:{t:'frame',name:'4×4 Single Net',cat:'Grip',props:{size:'4×4',fabric:'Single net'}},
+  k_rr_solid:{t:'frame',name:'4×4 Solid',cat:'Grip',props:{size:'4×4',fabric:'Solid (duvetyne)'}},
+  k_rr_lame:{t:'frame',name:'4×4 Silver Lamé',cat:'Grip',props:{size:'4×4',fabric:'Silver lamé'}},
   k_floppy:{t:'flag',name:'40×40 Floppy',cat:'Grip',props:{size:'40×40 floppy',ftype:'Solid flag'}},
   k_f18:{t:'flag',name:'18×24 Flag',cat:'Grip',props:{size:'18×24',ftype:'Solid flag'}},
   k_f18s:{t:'flag',name:'18×24 Single Net',cat:'Grip',props:{size:'18×24',ftype:'Single net'}},
   k_f18d:{t:'flag',name:'18×24 Double Net',cat:'Grip',props:{size:'18×24',ftype:'Double net'}},
   k_f18silk:{t:'flag',name:'18×24 Silk',cat:'Grip',props:{size:'18×24',ftype:'Silk'}},
+  g_f1824sog:{t:'flag',name:'18×24 Flag (solid)',cat:'Grip',group:'Flags, nets & silks',props:{size:'18×24',ftype:'Solid flag'}},
+  g_f1824sit:{t:'flag',name:'18×24 Single Net',cat:'Grip',group:'Flags, nets & silks',props:{size:'18×24',ftype:'Single net'}},
+  g_f1824dot:{t:'flag',name:'18×24 Double Net',cat:'Grip',group:'Flags, nets & silks',props:{size:'18×24',ftype:'Double net'}},
+  g_f1824sik:{t:'flag',name:'18×24 Silk',cat:'Grip',group:'Flags, nets & silks',props:{size:'18×24',ftype:'Silk'}},
+  g_f2436sog:{t:'flag',name:'24×36 Flag (solid)',cat:'Grip',group:'Flags, nets & silks',props:{size:'24×36',ftype:'Solid flag'}},
+  g_f2436sit:{t:'flag',name:'24×36 Single Net',cat:'Grip',group:'Flags, nets & silks',props:{size:'24×36',ftype:'Single net'}},
+  g_f2436dot:{t:'flag',name:'24×36 Double Net',cat:'Grip',group:'Flags, nets & silks',props:{size:'24×36',ftype:'Double net'}},
+  g_f2436sik:{t:'flag',name:'24×36 Silk',cat:'Grip',group:'Flags, nets & silks',props:{size:'24×36',ftype:'Silk'}},
+  g_f44sog:{t:'flag',name:'4×4 Flag (solid)',cat:'Grip',group:'Flags, nets & silks',props:{size:'4×4',ftype:'Solid flag'}},
+  g_f44sit:{t:'flag',name:'4×4 Single Net',cat:'Grip',group:'Flags, nets & silks',props:{size:'4×4',ftype:'Single net'}},
+  g_f44dot:{t:'flag',name:'4×4 Double Net',cat:'Grip',group:'Flags, nets & silks',props:{size:'4×4',ftype:'Double net'}},
+  g_f44sik:{t:'flag',name:'4×4 Silk',cat:'Grip',group:'Flags, nets & silks',props:{size:'4×4',ftype:'Silk'}},
+  g_pizza:{t:'bounce',name:'Pizza Box (bead board)',cat:'Grip',group:'Bounce',props:{size:'2×2',fabric:'Beadboard',side:'Bead (matte white)'}},
+  g_surfer:{t:'bounce',name:'Silver Surfer',cat:'Grip',group:'Bounce',props:{size:'4×4',fabric:'Beadboard',side:'Silver, shiny'}},
+  g_bead44:{t:'bounce',name:'4×4 Bead Board',cat:'Grip',group:'Bounce',props:{size:'4×4',fabric:'Beadboard',side:'Bead (matte white)'}},
+  g_bead48:{t:'bounce',name:'4×8 Bead Board',cat:'Grip',group:'Bounce',props:{size:'4×8',fabric:'Beadboard',side:'Bead (matte white)'}},
+  g_foam44:{t:'bounce',name:'4×4 Foamcore',cat:'Grip',group:'Bounce',props:{size:'4×4',fabric:'Foamcore (white)',side:'White'}},
+  g_ultra:{t:'bounce',name:'Ultrabounce (on a frame)',cat:'Grip',group:'Bounce',props:{size:'4×4',fabric:'Ultrabounce',side:'White'}},
+
   k_flexfill:{t:'bounce',name:'Flexfill 38″ Reflector',cat:'Grip',props:{size:'Flexfill 38″',fabric:'Flexfill 38″ (5-in-1)'}},
   k_apple:{t:'applebox',name:'Apple Box',cat:'Grip',props:{}},
   k_sandbag:{t:'sandbag',name:'25 lb Sandbag',cat:'Grip',props:{}},
@@ -683,7 +705,7 @@ function renderItems(items,o){
       // badge + label (unrotated)
       if(!o.ghost){const n=o.nums[it.id];const off=(s*.9+.55);const ang=((it.r||0)+180)*D2R;const bx=it.x+Math.cos(ang)*off,by=it.y+Math.sin(ang)*off;const br=8*px;
         L1.labels+=`<g pointer-events="none"><circle cx="${bx}" cy="${by}" r="${br}" fill="${on?C.badge:C.sub}"/><text x="${bx}" y="${by}" dy=".35em" text-anchor="middle" font-family="${C.mono}" font-weight="600" font-size="${fs}" fill="${C.badgeText}">${n}</text>`;
-        if(o.labels==='full'){const t1=(it.label?it.label+' · ':'')+L.name.replace(/ \(.*\)/,'');const t2=[it.role,fmtW(+it.watts||0)+(it.watts?'':''),it.gel!=='None'?it.gel:'',it.modifier!=='None'?it.modifier:'',(it.intensity<100?it.intensity+'%':''),(it.circuit?'⚡'+it.circuit:'')].filter(Boolean).join(' · ');
+        if(o.labels==='full'){const t1=(it.label?it.label+' · ':'')+L.name.replace(/ \(.*\)/,'');const t2=[it.role,fmtW(+it.watts||0)+(it.watts?'':''),it.gel!=='None'?it.gel:'',it.modifier!=='None'?it.modifier:'',...lightBits(it),(it.intensity<100?it.intensity+'%':''),(it.circuit?'⚡'+it.circuit:'')].filter(Boolean).join(' · ');
           L1.labels+=`<text x="${bx+br+3*px}" y="${by-1*px}" font-family="${C.font}" font-size="${fs}" font-weight="600" fill="${C.text}" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}">${esc(t1)}</text><text x="${bx+br+3*px}" y="${by+fs}" font-family="${C.font}" font-size="${fs*.9}" fill="${C.sub}" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}">${esc(t2)}</text>`;}
         L1.labels+='</g>';}
       return;
@@ -711,7 +733,7 @@ function renderItems(items,o){
       if(it.label)L1.labels+=`<text x="${it.x+.6}" y="${it.y-.4}" font-family="${C.mono}" font-size="${fs}" font-weight="600" fill="${col}" pointer-events="none">${esc(it.label)}</text>`;
       return;
     }
-    if(L.kind==='text'){
+    if(L.kind==='text'){if(L.shape==='callout'){L1.labels+=calloutSVG(it,ida,tr,C,px,sel);return;}
       L1.labels+=`<g ${ida} transform="${tr}"><text text-anchor="middle" dy=".35em" font-family="${C.font}" font-weight="600" font-size="${+it.fsize||.8}" fill="${C.text}">${esc(it.text)}</text>${sel?`<rect x="${-(String(it.text).length*(+it.fsize||.8)*.3)}" y="${-(+it.fsize||.8)*.7}" width="${String(it.text).length*(+it.fsize||.8)*.6}" height="${(+it.fsize||.8)*1.4}" fill="none" stroke="#f2a93b" stroke-width="${1.5*px}" stroke-dasharray="${4*px} ${3*px}"/>`:''}</g>`;
       return;
     }
@@ -741,7 +763,7 @@ function renderItems(items,o){
   return L1;
 }
 function gripExtent(it){if(it.t==='frame')return (FRAME_SIZES[it.size]||6)/2*(it.orient==='Overhead'?1:.3)+.5;if(it.shape==='flag'||it.t==='flag'||it.t==='negfill')return .9;return .9;}
-function gripLabel(it){switch(it.t){case 'frame':return `${it.size} ${it.fabric}`;case 'flag':case 'negfill':return `${it.size} ${it.ftype}`;case 'bounce':return `${it.size} ${it.fabric||'Bounce'}`;case 'vflat':return `V-flat (${it.side})`;default:return it.label||'';}}
+function gripLabel(it){switch(it.t){case 'frame':return `${it.size} ${it.fabric}`;case 'flag':case 'negfill':return `${it.size} ${it.ftype}`;case 'bounce':return `${it.size} ${it.fabric||'Bounce'}${it.side&&it.side!=='White'?' · '+it.side.toLowerCase():''}`;case 'vflat':return `V-flat (${it.side})`;default:return it.label||'';}}
 function lightGlyph(it,L,C,px,col,on){
   const s=L.s||1;const fam=L.group;const body=fam==='HMI'?'#9fc8ff':fam==='LED'?'#9fe8de':fam==='Fluorescent'?'#d1b8ff':fam==='Natural'?'#ffe08a':'#f2a93b';
   const fill=on?body:'none';const st=`stroke="${on?C.bg:body}" stroke-width="${1.2*px}"`;
@@ -1213,7 +1235,7 @@ function libIcon(key){
   return `<svg viewBox="${vb}">${inner}</svg>`;}
 function libEntries(){const arr=[];
   Object.values(LIB).filter(L=>L.kit).forEach(L=>arr.push({key:L.key,cat:L.cat,group:'Picksheet — Lighting',name:L.name,w:L.defaults.watts,batt:L.defaults.power==='Battery',kit:true}));
-  Object.entries(PRESETS).forEach(([k,p])=>arr.push({key:k,cat:p.cat,group:'Picksheet — '+(p.cat==='Grip'?'Grip':p.cat==='Power'?'Electric':'Camera'),name:p.name,kit:true}));
+  Object.entries(PRESETS).forEach(([k,p])=>arr.push({key:k,cat:p.cat,group:p.group||('Picksheet — '+(p.cat==='Grip'?'Grip':p.cat==='Power'?'Electric':'Camera')),name:p.name,kit:!p.group}));
   arr.push({key:'cable',cat:'Power',group:'Picksheet — Electric',name:'14/3 Stinger run (draw it)',line:true,kit:true});
   arr.push({key:'track',cat:'Camera',group:'Picksheet — Camera',name:'Procam dolly track (draw it, 12 ft max)',line:true,kit:true});
   Object.values(LIB).filter(L=>!L.kit&&!['beefy','pigeon','quadbox'].includes(L.key)).forEach(L=>arr.push({key:L.key,cat:L.cat,group:L.group,name:L.name,w:L.kind==='light'?L.defaults.watts:null}));Object.entries(LINES).forEach(([k,L])=>arr.push({key:k,cat:L.cat,group:L.group,name:L.name,line:true}));return arr;}
@@ -1316,23 +1338,35 @@ function panelItem(){
       ${fld('Label',inp('label',it.label,'text','placeholder="e.g. Streetlight"'))}
       ${fld('Role',sel('role',ROLES,it.role))}
       ${fld('Fixture',sel('t',Object.values(LIB).filter(x=>x.kind==='light').map(x=>x.name),L.name,'data-fixture="1"'))}
-      <div class="f2">${fld('Draw (W)',inp('watts',it.watts,'number','min="0" step="10"'))}${fld('Height (ft)',inp('height',it.height,'number','min="0" step="0.5"'))}</div>
-      ${fld('Mount',sel('mount',MOUNTS,it.mount))}</div>
-    <div class="grp"><h4>Output & color</h4>
+      ${fld('Draw (W)',inp('watts',it.watts,'number','min="0" step="10"'))}</div>
+    <div class="grp"><h4>Level</h4>
       ${fld('Intensity',`<div class="rangeRow"><input type="range" data-k="intensity" min="0" max="100" value="${it.intensity}"><span>${it.intensity}%</span></div>`)}
+      <div class="f2">${fld('Scrim or net',sel('scrim',SCRIMS,it.scrim||'None'))}${fld('ND gel',sel('nd',NDS,it.nd||'None'))}</div></div>
+    <div class="grp"><h4>Colour</h4>
       <div class="f2">${fld('Color temp (K)',inp('kelvin',it.kelvin,'number','min="1700" max="10000" step="100"'))}${fld('Gel',sel('gel',Object.keys(GELS),it.gel))}</div>
       ${it.gel==='Color gel (custom)'?fld('Gel color',inp('gelColor',it.gelColor,'color')):''}
       <div class="kv"><span>Result</span><span><i class="swatch" style="background:${hex(lightRGB(it))}"></i> ${GELS[it.gel]==='c'?'custom':fk+'K'}${typeof GELS[it.gel]==='number'&&GELS[it.gel]?` (${GELS[it.gel]>0?'+':''}${GELS[it.gel]} mired)`:''}</span></div>
-      ${fld('Modifier',sel('modifier',MODS,it.modifier))}
+      <div class="f2">${fld('Green / magenta',sel('green',GREENS,it.green||'None'))}${fld('Party colour',inp('party',it.party||'','text','placeholder="e.g. R27"'))}</div></div>
+    <div class="grp"><h4>Quality</h4>
+      ${fld('Diffusion, light to heavy',sel('diff',DIFFS,it.diff||'None'))}
+      ${it.diff&&it.diff!=='None'?fld('Where it sits',sel('diffAt',DIFFAT,it.diffAt||DIFFAT[0])):''}
+      ${fld('Attachment or spill control',sel('modifier',MODS,it.modifier))}
+      ${it.modifier==='Egg crate / grid'?fld('Grid angle',sel('gridDeg',['20°','30°','40°','50°','60°'],it.gridDeg||'40°')):''}
+      ${fld('Spot to flood',sel('focus',FOCUS,it.focus||'—'))}
       <div class="f2">${fld('Beam (°)',inp('beam',it.beam,'number','min="5" max="360" step="1"'))}${fld('Throw (ft)',inp('throw',it.throw,'number','min="1" max="80" step="1"'))}</div>
-      <div class="pSub">Beam and throw only shape the drawing (bare-fixture spread; modifiers change it). Throw shrinks as you dim.</div></div>
+      <div class="pSub">Beam and throw only shape the drawing. Throw shrinks as you dim.</div></div>
+    <div class="grp"><h4>Rig</h4>
+      ${fld('Mount',sel('mount',MOUNTS,it.mount))}
+      <div class="f2">${fld('Height (ft)',inp('height',it.height,'number','min="0" step="0.5"'))}${fld('Tilt',sel('tilt',TILTS,it.tilt||'Level'))}</div>
+      ${fld('How it reaches the subject',sel('path',PATHS,it.path||'Direct'))}
+      ${it.path&&it.path!=='Direct'?fld(it.path==='Bounced'?'Bounced into':'Through',`<input class="in" data-k="pathInto" list="pathList" value="${esc(it.pathInto||'')}" placeholder="${it.path==='Bounced'?'e.g. bead board, ceiling':'e.g. window, sheers, 4×4 frame'}"><datalist id="pathList">${(it.path==='Bounced'?['Bead board','Foamcore','Ultrabounce','Muslin','Ceiling','Wall']:['Window','Sheer curtains','Diffusion frame','Doorway']).map(x=>`<option value="${x}">`).join('')}</datalist>`):''}</div>
     <div class="grp"><h4>Power</h4>${fld('Power source',sel('power',['Mains','Battery'],it.power||'Mains'))}${it.bulbNote?`<div class="pSub">The lantern and bulb come from your allotment. Set <b>Draw (W)</b> to the bulb you actually use.</div>`:''}${fld('Circuit',`<input class="in" data-k="circuit" list="circuitList" value="${esc(it.circuit)}" placeholder="e.g. C1, Gen, Kitchen">`)}<datalist id="circuitList">${[...new Set(allCircuits())].map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
       <div class="kv"><span>Amps at ${P.settings.volts}V</span><span>${((+it.watts||0)/P.settings.volts).toFixed(2)} A</span></div></div>`;
   }
   else if(L.kind==='camera'){
     h+=`<div class="grp"><h4>Camera</h4><div class="f2">${fld('Camera',sel('cam',['A','B','C','D'],it.cam))}${fld('Height (ft)',inp('height',it.height,'number','min="0" step="0.5"'))}</div>
       ${(()=>{const l=lensOf(it);return `<div class="f"><label>Lens</label><div class="seg" style="flex-wrap:wrap">${LENSES.map(x=>`<button data-lens="${x.id}" class="${x.id===l.id?'on':''}">${x.id==='custom'?'Other':x.min?'18–110':x.f}</button>`).join('')}</div></div>
-        <div class="pSub" style="margin-top:-2px">${esc(l.name)}${l.mount==='F'?' · Nikon F mount, needs an F→E adapter on the FS7 II':l.mount==='E'?' · native E-mount':''}</div>
+        <div class="pSub" style="margin-top:-2px">${esc(l.name)}${l.mount==='F'?(/FS7/.test(it.sensor)?' · Nikon F mount, needs an F→E adapter on the FS7 II':' · Nikon F mount'):l.mount==='E'?' · native E-mount':''}</div>
         ${l.min?fld('Zoom',`<div class="rangeRow"><input type="range" data-k="lens" min="${l.min}" max="${l.max}" value="${it.lens}"><span>${it.lens}mm</span></div>`):l.f?'':fld('Focal length',inp('lens',it.lens,'number','min="8" max="600" step="1"'))}`;})()}
       ${fld('Sensor / mode',sel('sensor',Object.keys(SENSORS),it.sensor))}<div class="pSub">FS7 II widths come from Sony's lens equivalents for the 18–110mm kit lens (×1.6 in 17:9, ×1.7 in 16:9). Pick the mode you're recording in.</div>
       <div class="kv"><span>Horizontal FOV</span><span>${hfov(it).toFixed(1)}°</span></div>
@@ -1350,7 +1384,7 @@ function panelItem(){
     h+=fld('Label',inp('label',it.label,'text','placeholder="optional"'));
     if(it.t==='frame')h+=fld('Size',sel('size',Object.keys(FRAME_SIZES),it.size))+fld('Fabric',sel('fabric',FABRICS,it.fabric))+fld('Orientation',sel('orient',['Vertical','Overhead'],it.orient));
     if(it.t==='flag'||it.t==='negfill')h+=fld('Size',sel('size',Object.keys(FLAG_SIZES),it.size))+fld('Type',sel('ftype',FLAGTYPES,it.ftype));
-    if(it.t==='bounce')h+=fld('Size',sel('size',Object.keys(BOUNCE_SIZES),it.size))+fld('Surface',sel('fabric',['Flexfill 38″ (5-in-1)','Beadboard','Foamcore (white)','Foamcore (black)','Ultrabounce','Silver reflector','Gold reflector'],it.fabric));
+    if(it.t==='bounce')h+=fld('Size',sel('size',Object.keys(BOUNCE_SIZES),it.size))+fld('Surface',sel('fabric',['Flexfill 38″ (5-in-1)','Beadboard','Foamcore (white)','Foamcore (black)','Ultrabounce','Bleached muslin','Unbleached muslin','Silver reflector','Gold reflector'],it.fabric))+fld('Side facing the light',sel('side',BSIDES,it.side||'White'));
     if(it.t==='vflat')h+=fld('Side facing',sel('side',['White','Black'],it.side));
     if('standed' in it)h+=`<label class="chk"><input type="checkbox" data-k="standed" ${it.standed?'checked':''}> Count its stands & sandbags in the gear list</label>`;
   }
@@ -1435,7 +1469,7 @@ function gearForItems(items,map,shotKey){
     const L=LIB[it.t];if(!L)return;
     if(L.kind==='light'){if(it.watts===0&&L.group==='Natural')return;add('Electric',L.name,1);
       if(it.gel&&it.gel!=='None')add('Electric — gels & diffusion',it.gel==='Color gel (custom)'?'Color gel (custom)':it.gel+' gel',1);
-      if(it.modifier&&it.modifier!=='None')add('Electric — gels & diffusion',it.modifier,1);
+      if(it.modifier&&it.modifier!=='None')add('Electric — gels & diffusion',it.modifier,1);if(it.diff&&it.diff!=='None')add('Electric — gels & diffusion',it.diff,1);if(it.scrim&&it.scrim!=='None')add('Electric — gels & diffusion',it.scrim,1);if(it.nd&&it.nd!=='None')add('Electric — gels & diffusion',it.nd+' gel',1);
       const m=it.mount;const st={'Light stand (Arri kit)':['Lightweight stand (Arri kit)',1],'Beefy baby stand':['Beefy Baby Riser',1],'Pigeon (floor)':['Pigeon plate',0],'C-stand':['C-Stand',1],'Combo stand':['Combo / Junior Stand',2],'Baby stand':['Baby Stand',1],'Rolling stand':['Rolling Stand',1],'Menace / boom arm':['Menace / Boom Arm',3],'Floor (turtle)':['Turtle Base',0],'Clamp / rig':['Clamp (mafer / super clamp)',0],'Overhead / pipe':['Pipe clamp / cardellini',0]}[m];
       if(st){add('Grip — stands (for fixtures)',st[0],1,'from fixture mounts');if(st[1])add('Grip — stands (for fixtures)','Sandbag',st[1],'est.');}
       if(drawsPower(it)>0)add('Power & distro','Stinger 25′ per fixture',1,'est. 1 per powered fixture');else if(it.power==='Battery')add('Electric — batteries','Charged batteries for '+L.name.replace(/ \(.*\)/,''),1,'battery-powered');
@@ -1497,7 +1531,7 @@ function applyField(el,live){
   if((k==='label'||k==='color')&&it.t==='actor')activeItems().forEach(l=>{if(l.t==='line'&&l.owner===it.id)l[k]=v;});
   if(k==='intensity'){const sp=el.parentElement.querySelector('span');if(sp)sp.textContent=v+'%';it.intensity=+v;}
   if(k==='lens'&&el.type==='range'){const sp=el.parentElement.querySelector('span');if(sp)sp.textContent=v+'mm';it.lens=+v;}
-  renderCanvas();if(!live&&['gel','sensor','lens','kelvin','circuit','modifier','style','power'].includes(k))renderPanel();scheduleSave();
+  renderCanvas();if(!live&&['gel','sensor','lens','kelvin','circuit','modifier','style','power','diff','path','withLight','lead'].includes(k))renderPanel();scheduleSave();
 }
 function panelInput(e){if(e.target.dataset.k&&(e.target.type==='range'||e.target.type==='color'||e.target.tagName==='TEXTAREA'||e.target.type==='text'||e.target.type==='number'))applyField(e.target,true);}
 function panelChange(e){const t=e.target;fromQuick=!!t.closest('#quick');try{
@@ -1636,9 +1670,10 @@ $('#bHelp').onclick=()=>openModal(`<h3>How to use it</h3>
 <b>1. Break it down.</b> Open the library panel (top-left button or <b>[</b>) to add scenes, setups and shots, or import your shot list from the <b>Shot list</b> button. A new setup carries over the walls, set pieces, actors and power, but not the lights.<br>
 <b>2. Build the room.</b> Press <b>B</b> and drag out a room — its size shows as you drag — or click once to type exact dimensions. For odd shapes use <b>W</b>: walls stay straight on their own, each wall shows its length, and you can type a length and press Enter. Each side of a room is its own wall: tap one to change or delete just that side, or double-click to select the whole room. Start a wall on another wall and they join. With a wall selected, <b>Add corner</b> bends it and <b>Cut gap</b> removes a stretch. Doors and windows make their own opening and move with the wall. <b>Floor plan</b> (bottom bar) puts an image or PDF under the grid to trace over, and <b>Lock walls</b> keeps them still once the room is right.<br>
 <b>3. Furnish and light it.</b> Pick anything from the library and click to drop it. Furniture sits flush when you drop it near a wall, and wall-mounted pieces (TV, mirror, shelf) attach to the wall and move with it. Drop a camera on a dolly and they move as one; a dolly dropped on track lines up with it. The bar above the plan shows the selected item's size, angle and the settings you change most; <b>More…</b> opens everything.<br>
-<b>4. Block it.</b> Select an actor or camera and press <b>Draw move</b>. The path stays attached: move the actor or camera and the path follows; drag the path and the whole move goes together. Points snap to actors, marks, cameras and dolly track.<br>
+<b>4. Block it.</b> Select an actor or camera and press <b>Draw move</b>. To add more stops later, select the move and press <b>Continue</b>. The path stays attached: move the actor or camera and the path follows; drag the path and the whole move goes together. Points snap to actors, marks, cameras and dolly track.<br>
 <b>5. Track it.</b> Paste the scene's sides into the <b>Script</b> tab and link lines to each shot. The <b>Shot list</b> shows every shot with its lens, cast, power and status.<br>
 <b>6. Export.</b> <b>Export → Shot sheet</b> lets you tick the fields and layers you want and previews the page. Add the director’s storyboard frame in the <b>Shot</b> tab and it prints beside the diagram.<br>
+<b>Layers and notes.</b> <b>Layers</b> (bottom bar) shows or hides lighting, grip, camera, set, production design and notes, on screen and in exports. A <b>Note Bubble</b> (Set → Annotation) points at anything that needs explaining. <b>Copy</b> and <b>Paste</b> (⌘/Ctrl C and V) reuse items across setups and scenes.<br>
 <b>7. Calculators.</b> The <b>Calculators</b> button (bottom bar) has sun and moon, depth of field, lens finder and light falloff, all measured from this plot. They are planning estimates, not measurements: the plot is a placement reference, not a picture of what the lighting or framing will look like on set.</div>
 <div class="keys">
 <span><kbd>V</kbd> <kbd>H</kbd></span><span>Select · Pan (or hold <kbd>Space</kbd>, or drag empty space)</span>
@@ -1955,7 +1990,7 @@ const CALC={open:false,tab:'sun',dof:{cam:'',act:'',stop:2.8,coc:'',show:true},l
 const camsNow=()=>activeItems().filter(i=>i.t==='camera'),actsNow=()=>activeItems().filter(i=>i.t==='actor'),lightsNow=()=>activeItems().filter(i=>LIB[i.t]&&LIB[i.t].kind==='light');
 const pick=(arr,id)=>arr.find(i=>i.id===id)||arr[0]||null;const distFt=(a,b)=>a&&b?Math.hypot(a.x-b.x,a.y-b.y):0;
 const camName=c=>`${c.cam||'A'} cam · ${lensLabel(c)}`;const lightName=l=>(l.label||LIB[l.t].name);
-function cocFor(c){const sw=SENSORS[c.sensor]||21.18;return sw<=14?.011:sw<=18?.015:sw<=26?.025:.03;}
+function cocFor(c){const sw=SENSORS[c.sensor]||21.18;return sw<=7?.006:sw<=11?.011:sw<=14?.013:sw<=20?.015:sw<=29?.025:.03;}
 function dofCalc(){const c=pick(camsNow(),CALC.dof.cam),a=pick(actsNow(),CALC.dof.act);if(!c||!a)return null;const f=+c.lens||35,N=Math.max(.7,+CALC.dof.stop||2.8),coc=+CALC.dof.coc||cocFor(c);const d=distFt(c,a),sm=d*304.8;
   if(sm<=f*1.5)return {c,a,d,tooClose:true};const H=f*f/(N*coc)+f;const near=sm*(H-f)/(H+sm-2*f),far=sm>=H?Infinity:sm*(H-f)/(H-sm);return {c,a,d,f,N,coc,H:H/304.8,near:near/304.8,far:far/304.8};}
 const selOpt=(arr,id,name)=>arr.map(i=>`<option value="${i.id}" ${i.id===id?'selected':''}>${esc(name(i))}</option>`).join('');
@@ -2114,6 +2149,85 @@ function flushToWall(it){const L=LIB[it.t];if(!L||L.kind!=='set'||L.wallSnap||it
 {const last={};window.addEventListener('pointerup',()=>setTimeout(()=>{if(drag&&ptrs.size)return;const ids=selIds();if(ids.length!==1)return;const f=findItem(ids[0]);if(!f||f.it.t==='line')return;const it=f.it;const key=it.x+','+it.y;const was=last[it.id];last[it.id]=key;if(was===undefined||was===key||!V.snap)return;
     try{if(flushToWall(it)){last[it.id]=it.x+','+it.y;renderCanvas();renderQuick();scheduleSave();}}catch(e){}},0));
   cv.addEventListener('pointerdown',()=>setTimeout(()=>{const ids=selIds();if(ids.length===1){const f=findItem(ids[0]);if(f&&f.it.t!=='line'&&last[f.it.id]===undefined)last[f.it.id]=f.it.x+','+f.it.y;}},0));}
+
+/* ============================================================
+   Gaffer feedback build
+   ============================================================ */
+/* new items start square: no remembered angle from the last one placed */
+V.lastRot=new Proxy({},{set(){return true;},get(){return undefined;}});
+
+/* ---- light settings: Level, Colour, Quality, Rig ---- */
+const SCRIMS=['None','Half single scrim','Single scrim','Half double scrim','Double scrim','Single net','Double net'];
+const NDS=['None','ND .3 (1 stop)','ND .6 (2 stops)','ND .9 (3 stops)'];
+const GREENS=['None','1/8 Plus Green','1/4 Plus Green','1/2 Plus Green','Full Plus Green','1/8 Minus Green','1/4 Minus Green','1/2 Minus Green','Full Minus Green'];
+const DIFFS=['None','Opal Frost','Hampshire Frost','251 (1/4 white diffusion)','250 (1/2 white diffusion)','216 (full white diffusion)','1/4 grid cloth','1/2 grid cloth','Full grid cloth','1/4 silk','1/2 silk','Full silk','Bleached muslin','Unbleached muslin','Magic Cloth'];
+const DIFFAT=['On the fixture','In a softbox or dome','On a separate frame'];
+const FOCUS=['—','Spot','Medium','Flood'];const TILTS=['Level','Tilted down','Straight down','Tilted up'];const PATHS=['Direct','Bounced','Through'];
+const BSIDES=['White','Bead (matte white)','Silver, shiny','Silver, matte','Gold','Black (negative fill)'];
+function lightBits(it){const o=[];if(it.scrim&&it.scrim!=='None')o.push(it.scrim);if(it.nd&&it.nd!=='None')o.push(it.nd.replace(/ \(.*\)/,''));if(it.green&&it.green!=='None')o.push(it.green);if(it.party)o.push(it.party);
+  if(it.diff&&it.diff!=='None')o.push(it.diff.replace(/ \(.*\)/,'').replace(/^(\d+)$/,'$1 diff'));if(it.modifier==='Egg crate / grid'&&it.gridDeg)o.push(it.gridDeg);if(it.focus&&it.focus!=='—')o.push(it.focus.toLowerCase());
+  if(it.path==='Bounced')o.push('bounced'+(it.pathInto?' into '+it.pathInto:''));else if(it.path==='Through')o.push('through '+(it.pathInto||'diffusion'));return o;}
+{const _eb=effBeam;effBeam=function(it){let b=_eb(it);if(it.focus==='Spot')b*=.6;else if(it.focus==='Flood')b*=1.3;if(it.modifier==='Egg crate / grid')b=Math.min(b,parseInt(it.gridDeg)||40);if(it.modifier==='Snoot')b=Math.min(b,20);return b;};}
+{const OLD={'216 diffusion':'216 (full white diffusion)','250 diffusion':'250 (1/2 white diffusion)','Opal':'Opal Frost'};const _lo2=linkOrphans;linkOrphans=function(p){try{p.scenes.forEach(sc=>sc.setups.forEach(su=>[su.items,...su.shots.map(sh=>sh.items)].forEach(arr=>arr.forEach(it=>{if(OLD[it.modifier]){it.diff=OLD[it.modifier];it.modifier='None';}}))));}catch(e){}return _lo2(p);};}
+
+/* ---- more cameras: digital bodies by recording mode, film by format ---- */
+Object.assign(SENSORS,{
+ 'ARRI Alexa 35 — Open Gate 4.6K (28.0mm)':27.99,'ARRI Alexa 35 — 4.6K 16:9 (28.0mm)':27.99,'ARRI Alexa 35 — 4K 16:9 (25.0mm)':24.95,
+ 'ARRI Alexa Mini — Open Gate 3.4K (28.3mm)':28.25,'ARRI Alexa Mini — 3.2K 16:9 (26.4mm)':26.4,'ARRI Alexa Mini — 2.8K / HD 16:9 (23.8mm)':23.76,
+ 'ARRI Alexa Mini LF — Open Gate 4.5K (36.7mm)':36.7,'ARRI Alexa Mini LF — UHD 16:9 (31.7mm)':31.68,
+ 'Sony Venice / Venice 2 — Full Frame (35.9mm)':35.9,'Sony Venice / Venice 2 — Super 35 (24.3mm)':24.3,
+ 'RED V-Raptor — 8K VV (41.0mm)':40.96,'RED Komodo / Komodo-X — 6K (27.0mm)':27.03,
+ 'Sony FX6 — Full Frame (35.7mm)':35.7,'Sony FX3 — Full Frame (35.6mm)':35.6,'Canon C70 / C300 III — Super 35 (26.2mm)':26.2,
+ 'Blackmagic Pocket 6K — Super 35 (23.1mm)':23.1,'Blackmagic Pocket 4K — Four Thirds (19.0mm)':18.96,
+ 'Film · Super 16 — Arriflex 416, SR3, Aaton XTR (12.5mm)':12.52,'Film · Regular 16 — Bolex (10.3mm)':10.26,
+ 'Film · 35mm 4-perf Super 35 — Arricam LT/ST, Arriflex 235/435 (24.9mm)':24.89,'Film · 35mm 3-perf Super 35 (24.9mm)':24.891,'Film · 35mm 2-perf (22.0mm)':21.95,'Film · 35mm Academy (22.0mm)':21.951,
+ 'Film · Super 8 (5.8mm)':5.79});
+
+/* ---- copy and paste ---- */
+let CLIP=[],clipN=0;
+function copySel(){const ids=selIds();if(!ids.length)return false;CLIP=ids.map(id=>findItem(id)).filter(Boolean).map(f=>clone(f.it));clipN=0;renderTools();toast(CLIP.length===1?'Copied. Paste with ⌘/Ctrl V or the Paste button.':`${CLIP.length} items copied`);return true;}
+function pasteClip(){if(!CLIP.length)return;snap();clipN++;const copies=CLIP.map(c=>{const n=clone(c);if(n.t==='line')n.pts=n.pts.map(q=>({x:r2(q.x+clipN),y:r2(q.y+clipN)}));else{n.x=r2(n.x+clipN);n.y=r2(n.y+clipN);}delete n.dolly;return n;});reId(copies);
+  copies.forEach(n=>{if(n.owner&&!copies.some(c=>c.id===n.owner))n.owner='';const sc=n.scope||defaultScope(n);(sc==='shot'?shot().items:setup().items).push(n);});explodeWalls(setup().items);V.sel=copies[copies.length-1].id;V.multi=copies.length>1?copies.map(c=>c.id):[];changed();toast(copies.length===1?'Pasted':`${copies.length} items pasted`);}
+document.addEventListener('keydown',e=>{if(!(e.metaKey||e.ctrlKey)||e.altKey)return;const k=e.key.toLowerCase();if(k!=='c'&&k!=='v')return;const t=e.target;if(t&&(/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||t.isContentEditable))return;if(String(window.getSelection()||''))return;
+  if(k==='c'){if(copySel()){e.preventDefault();e.stopImmediatePropagation();}}else if(CLIP.length){e.preventDefault();e.stopImmediatePropagation();pasteClip();}},true);
+
+/* ---- continue a camera or actor move, track or cable that is already drawn ---- */
+function continueLine(it){if(!it||it.t!=='line'||it.kind==='wall')return;V.placing=null;setTool(it.kind);V.draft={t:'line',kind:it.kind,pts:it.pts.map(p=>({x:p.x,y:p.y})),color:it.color,label:it.label,owner:it.owner||'',_from:it.id};V.sel=null;V.multi=[];V.typed='';renderQuick();updHint();renderCanvas();toast('Click each new stop. Enter or double-click to finish.');}
+{const _fd2=finishDraft;finishDraft=function(){const d=V.draft;const from=d&&d._from?findItem(d._from):null;_fd2();if(!from||!d||d.pts.length<2)return;const it=selItem();if(!it||it.t!=='line'||it.id===from.it.id)return;Object.keys(from.it).forEach(k=>{if(k!=='id'&&k!=='pts')it[k]=from.it[k];});const f=findItem(from.it.id);if(f)f.arr.splice(f.arr.indexOf(f.it),1);changed();};}
+{const _rq2=renderQuick;renderQuick=function(){_rq2();const q=$('#quick');if(!q||!q.innerHTML||fromQuick)return;const ids=selIds();const sep=q.querySelector('.qsep');if(!sep)return;
+    if(ids.length===1){const it=selItem();if(it&&it.t==='line'&&it.kind!=='wall')sep.insertAdjacentHTML('beforebegin',`<button class="btn sm" data-xact="cont" title="Add more stops to the end of this ${it.kind==='actor'||it.kind==='cammove'?'move':'line'}">Continue</button>`);
+      if(it&&it.t==='callout')sep.insertAdjacentHTML('beforebegin',`<label class="qf">Note<input class="in" data-k="text" value="${esc(it.text)}" style="width:190px"></label><label class="qf">Pointer<input class="in" data-k="lead" type="number" min="0" step=".5" value="${esc(it.lead)}" style="width:58px"></label>`);}
+    sep.insertAdjacentHTML('afterend',`<button class="btn sm" data-xact="copy" title="Copy (⌘/Ctrl C)">Copy</button>`);};}
+$('#quick').addEventListener('click',e=>{const b=e.target.closest('[data-xact]');if(!b)return;const a=b.dataset.xact;if(a==='copy')copySel();else if(a==='cont')continueLine(selItem());});
+
+/* ---- note bubbles ---- */
+def('callout',{cat:'Set',group:'Annotation',name:'Note Bubble',kind:'text',shape:'callout',layer:'notes',defaults:{text:'Note',fsize:.6,lead:3,r:-45}});
+function calloutLines(t){const w=String(t||'').split(/\s+/);const out=[];let cur='';w.forEach(x=>{if((cur+' '+x).trim().length>26&&cur){out.push(cur);cur=x;}else cur=(cur+' '+x).trim();});if(cur)out.push(cur);return out.length?out:[''];}
+function calloutSVG(it,ida,tr,C,px,sel){const fs=+it.fsize||.6,ln=calloutLines(it.text),lead=Math.max(0,+it.lead||0);const w=Math.max(...ln.map(l=>l.length))*fs*.56+fs*1.2,h=ln.length*fs*1.25+fs*.7;const r=it.r||0;
+  const a=r*D2R,ex=Math.cos(a)*lead,ey=Math.sin(a)*lead;const tip=lead>0?`<path d="M0 0 L${ex} ${ey}" stroke="#bd5103" stroke-width="${1.6*px}" fill="none"/><circle cx="${ex}" cy="${ey}" r="${4*px}" fill="#bd5103"/>`:'';
+  const box=`<rect x="${-w/2}" y="${-h/2}" width="${w}" height="${h}" rx="${fs*.5}" fill="#fff6ea" stroke="${sel?'#f2a93b':'#bd5103'}" stroke-width="${(sel?2.4:1.4)*px}"/>`+ln.map((l,i)=>`<text x="0" y="${-h/2+fs*.35+(i+.8)*fs*1.25-fs*.15}" text-anchor="middle" font-family="${C.font}" font-weight="600" font-size="${fs}" fill="#3a2410">${esc(l)}</text>`).join('');
+  return `<g ${ida} transform="translate(${it.x} ${it.y})">${tip}${box}</g>`;}
+
+/* ---- blackout tent and sheer curtains ---- */
+def('blackout',{cat:'Grip',group:'Diffusion & Control',name:'Blackout Tent (4×4)',kind:'set',shape:'column',layer:'grip',defaults:{w:4,h:4,label:'Blackout tent'}});
+def('sheers',{cat:'Set',group:'Wall-mounted',name:'Sheer Curtains',kind:'set',shape:'box',wallSnap:true,wallMount:true,defaults:{w:5,h:.4,label:'Sheers',withLight:true}});
+
+/* ---- department layers ---- */
+const LAYERS=[['light','Lighting'],['grip','Grip'],['camera','Camera'],['set','Set'],['pd','Production design'],['notes','Notes']];
+const HID={};
+function layerOf(it){if(it.t==='line')return it.kind==='wall'?'set':it.kind==='cable'?'light':(it.kind==='track'||it.kind==='cammove')?'camera':null;const L=LIB[it.t];if(!L)return null;if(L.layer)return L.layer;
+  if(L.kind==='light'||L.kind==='power')return 'light';if(L.kind==='grip')return 'grip';if(L.kind==='camera'||L.kind==='camgear')return 'camera';if(L.kind==='text'||it.t==='north')return 'notes';if(L.kind==='set')return L.group==='Architecture'?'set':'pd';return null;}
+function layerShown(it){const l=layerOf(it);if(!l||!HID[l])return true;return !!(it.withLight&&!HID.light);}
+{const _ri4=renderItems;renderItems=function(items,o){if(o&&(o.dimSel||o.tag==='sheet')&&LAYERS.some(([k])=>HID[k]))items=items.filter(layerShown);return _ri4(items,o);};}
+{const _rt4=renderTools;renderTools=function(){_rt4();const vb=$('#viewBar');if(!vb)return;const n=LAYERS.filter(([k])=>HID[k]).length;
+    if(!vb.querySelector('#bLayers')){vb.querySelector('#bPlan').insertAdjacentHTML('beforebegin',`<button class="btn sm" id="bLayers" title="Show or hide lighting, grip, camera, set, production design and notes" style="margin-left:6px"></button>`);vb.querySelector('#bLayers').onclick=()=>{const p=$('#layerPop');p.classList.toggle('open');renderLayerPop();};}
+    vb.querySelector('#bLayers').textContent=n?`Layers (${n} hidden)`:'Layers';
+    let pb=vb.querySelector('#bPaste');if(CLIP.length&&!pb){vb.insertAdjacentHTML('beforeend',`<button class="btn sm" id="bPaste" title="Paste what you copied (⌘/Ctrl V)" style="margin-left:6px">Paste</button>`);vb.querySelector('#bPaste').onclick=pasteClip;}};}
+function renderLayerPop(){const p=$('#layerPop');if(!p||!p.classList.contains('open'))return;p.innerHTML=`<div style="font:500 16px 'EB Garamond',Garamond,serif;margin-bottom:6px">Layers</div>`+LAYERS.map(([k,n])=>`<label class="chk" style="display:block;margin:3px 0"><input type="checkbox" data-layer="${k}" ${HID[k]?'':'checked'}> ${n}</label>`).join('')+`<div class="pSub" style="margin-top:6px;max-width:210px">Hidden layers are also left out of exports. Actors and their moves always show. A set piece marked “affects the lighting” stays visible with the Lighting layer.</div>`;}
+(()=>{const p=document.createElement('div');p.id='layerPop';$('#stage').appendChild(p);p.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.layer;if(!k)return;HID[k]=!e.target.checked;const s=selItem();if(s&&!layerShown(s)){V.sel=null;V.multi=[];}renderTools();changed(true,true);});
+  document.addEventListener('pointerdown',e=>{if(p.classList.contains('open')&&!p.contains(e.target)&&e.target.id!=='bLayers')p.classList.remove('open');});})();
+{const _rp3=renderPanel;renderPanel=function(){_rp3();if(V.rightTab!=='item'||!UI.R)return;const it=selItem();if(!it||it.t==='line')return;const L=LIB[it.t];if(!L||L.kind!=='set'||layerOf(it)!=='pd')return;
+    $('#panel').insertAdjacentHTML('beforeend',`<div class="grp"><h4>Layers</h4><label class="chk"><input type="checkbox" data-k="withLight" ${it.withLight?'checked':''}> Affects the lighting: keep it visible with the Lighting layer</label></div>`);};}
 const BRANDFF=(()=>{let o='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.type===5&&/EB Garamond|Lato/.test(r.cssText))o+=r.cssText;}catch(e){}}return o;})();
 /* ============================================================
    Export
@@ -2173,9 +2287,9 @@ function buildSheet0(sc,su,sh,X){
       t+=txt(RX+10,y,'#',{size:10.5,w:700,c:T.sub})+txt(RX+36,y,'FIXTURE',{size:10.5,w:700,c:T.sub})+txt(RX+230,y,'ROLE',{size:10.5,w:700,c:T.sub})+txt(RX+335,y,'COLOR / MOD',{size:10.5,w:700,c:T.sub})+txt(RX+RW-10,y,'W · CKT',{size:10.5,w:700,c:T.sub,anchor:'end'});y+=20;
       let shown=0;lights.forEach(l=>{if(!room(X.powerBlock?150:24))return;shown++;const L=LIB[l.t];const on=l.on!==false;t+=`<circle cx="${RX+18}" cy="${y-4}" r="9" fill="${on?C.badge:T.off}"/>`+txt(RX+18,y,nums[l.id],{size:11,w:700,c:C.badgeText,anchor:'middle'});
         const nm=(l.label?l.label+' — ':'')+L.name.replace(/ \(.*\)/,'');t+=txt(RX+36,y,nm.length>30?nm.slice(0,29)+'…':nm,{size:11.5,w:600,c:on?T.ink:T.off})+txt(RX+230,y,(l.role||'').slice(0,15)+(on?'':' (off)'),{size:11.5,c:on?T.ink:T.off});
-        const cm=[GELS[l.gel]==='c'?'color gel':(effKelvin(l)+'K'),l.gel!=='None'&&GELS[l.gel]!=='c'?l.gel:'',l.modifier!=='None'?l.modifier:'',l.intensity<100?l.intensity+'%':''].filter(Boolean).join(' · ');
-        t+=`<rect x="${RX+335}" y="${y-11}" width="10" height="10" fill="${hex(lightRGB(l))}" stroke="${T.off}" stroke-width=".5"/>`+txt(RX+350,y,cm.length>19?cm.slice(0,18)+'…':cm,{size:10.5});
-        t+=txt(RX+RW-10,y,`${l.watts?fmtW(+l.watts):'—'}${l.circuit?' · '+l.circuit:''}`,{size:11,anchor:'end'});y+=21;});
+        const cm=[GELS[l.gel]==='c'?'color gel':(effKelvin(l)+'K'),l.gel!=='None'&&GELS[l.gel]!=='c'?l.gel:'',l.intensity<100?l.intensity+'%':''].filter(Boolean).join(' · ');const det=[l.modifier!=='None'?l.modifier:'',...lightBits(l),l.diff&&l.diff!=='None'&&l.diffAt&&l.diffAt!==DIFFAT[0]?l.diffAt.toLowerCase():'',l.tilt&&l.tilt!=='Level'?l.tilt.toLowerCase():''].filter(Boolean).join(' · ');
+        t+=`<rect x="${RX+335}" y="${y-11}" width="10" height="10" fill="${hex(lightRGB(l))}" stroke="${T.off}" stroke-width=".5"/>`+txt(RX+350,y,cm.length>22?cm.slice(0,21)+'…':cm,{size:10.5});
+        t+=txt(RX+RW-10,y,`${l.watts?fmtW(+l.watts):'—'}${l.circuit?' · '+l.circuit:''}`,{size:11,anchor:'end'});y+=21;if(det){t+=txt(RX+36,y-5,det.length>86?det.slice(0,85)+'…':det,{size:10,c:T.sub});y+=13;}});
       if(lights.length>shown){t+=txt(RX+36,y,`+ ${lights.length-shown} more…`,{size:11,c:T.sub});y+=20;}
       if(!lights.length){t+=txt(RX+10,y,'No fixtures placed.',{size:12,c:T.sub});y+=20;}y+=8;}
     if(X.powerBlock&&sec('Power')){
