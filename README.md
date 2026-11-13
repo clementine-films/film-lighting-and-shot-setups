@@ -1,2 +1,2 @@
-# film-lighting-and-shot-setups
+# shot-plot
 Plotting lighting and camera shots for each setup
