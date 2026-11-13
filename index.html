@@ -2183,7 +2183,7 @@ const savedWhere=w=>w==='account'?'':w==='browser'?' It is stored in this browse
 
 /* ---- floor plan under the diagram ---- */
 function planSVG(su,forExport){const pl=su.plan;if(!pl||!pl.img||!IMG[pl.img]||(forExport&&pl.exp===false))return '';const cx=pl.x+pl.w/2,cy=pl.y+pl.h/2;return `<image href="${IMG[pl.img]}" x="${pl.x}" y="${pl.y}" width="${pl.w}" height="${pl.h}" preserveAspectRatio="none" opacity="${pl.op==null?.5:pl.op}" transform="rotate(${pl.r||0} ${cx} ${cy})" pointer-events="none"/>`;}
-{const _ri3=renderItems;renderItems=function(items,o){const L=_ri3(items,o);if(o&&!o.ghost&&(o.dimSel||o.tag==='sheet')){try{L.floor=planSVG(o.tag==='sheet'&&window.__expSu?window.__expSu:setup(),o.tag==='sheet')+(L.floor||'');}catch(e){}}return L;};}
+{const _ri3=renderItems;renderItems=function(items,o){const L=_ri3(items,o);if(o&&!o.ghost&&(o.dimSel||o.tag==='sheet')){try{const pv=planSVG(o.tag==='sheet'&&window.__expSu?window.__expSu:setup(),o.tag==='sheet');if(pv){L.floor=pv+(L.floor||'');if(L.pieces)L.pieces.push({key:-1,html:pv});}}catch(e){}}return L;};}
 function openPlan(){const su=setup(),pl=su.plan;const has=pl&&pl.img;
   openModal(`<h3>Floor plan</h3><div class="pSub" style="margin-bottom:10px">Put an image or the first page of a PDF under the diagram, set its scale, then trace your walls over it. It belongs to this setup.</div>
    ${has?`${IMG[pl.img]?`<img src="${IMG[pl.img]}" style="max-width:100%;max-height:160px;border-radius:6px;border:1px solid var(--line2);display:block;margin-bottom:10px">`:''}
