@@ -1368,13 +1368,13 @@ function panelItem(){
   if(!it)return `<div class="pTitle">Nothing selected</div><div class="pSub">Click any item on the plan to edit it. Pick a fixture, grip piece or set piece from the library to place it.</div>
   <div class="grp"><h4>How this file is organized</h4><div style="font-size:12px;color:#c3c8cf;line-height:1.55">
   <p style="margin:0 0 8px"><b>Scene</b> → one or more lighting <b>setups</b> → one or more <b>shots</b>.</p>
-  <p style="margin:0 0 8px">Lights, grip, walls, set pieces and actor marks live on the <b>setup</b>, so every shot in it shares them. Cameras, dolly track and camera moves live on the <b>shot</b>. You can switch any item between the two with the <i>Appears in</i> field.</p>
+  <p style="margin:0 0 8px">Lights, grip, walls and set pieces live on the <b>setup</b>, so every shot in it shares them. Characters, their marks and moves, cameras, dolly track and camera moves live on each <b>shot</b>: a new shot starts as a copy of the one you're on, and changing it never touches the others.</p>
   <p style="margin:0">Tick <b>Other shots</b> in the toolbar to see the setup's other camera positions faded out, so you can check coverage and line crossing.</p></div></div>
   ${shotItemsSummary()}`;
   const L=LIB[it.t];const isLine=it.t==='line';
   const title=isLine?LINES[it.kind].name:L.name;
   let h=`<div class="pTitle">${esc(title)}</div><div class="pSub">${isLine?`${lineLen(it.pts).toFixed(1)} ft · ${it.pts.length} points`:`at (${it.x}′, ${it.y}′) · ${Math.round(it.r||0)}°`}</div>`;
-  h+=fld('Appears in',sel('scope',['setup','shot'],it.scope).replace('>setup<','>All shots in setup<').replace('>shot<','>This shot only<'));
+  
   if(isLine){
     if(it.kind==='actor')h+=fld('Character',inp('label',it.label))+fld('Action / note',inp('note',it.note||'','text','placeholder="crosses to counter"'))+fld('Color',inp('color',it.color,'color'));
     else if(it.kind==='cammove')h+=fld('Move label',inp('label',it.label,'text','placeholder="DOLLY IN, ARC LEFT…"'))+fld('Color',inp('color',it.color,'color'));
@@ -2940,8 +2940,8 @@ function blockingOf(items){return items.filter(isBlocking);}
 // a shot made some other way (shot-list import) starts from its neighbour in the setup
 function seedShot(su,sh){if(!su||!sh||sh.items.length)return;const i=su.shots.indexOf(sh);const prev=su.shots.slice(0,Math.max(0,i)).reverse().find(s=>s.items.length)||su.shots.slice(i+1).find(s=>s.items.length);if(prev)sh.items=reId(clone(prev.items));}
 // older projects kept characters on the setup, shared by every shot: give each shot its own copy
-function migrateBlocking(p){if(!p||p.blockV>=2)return p;
-  p.scenes.forEach(sc=>sc.setups.forEach(su=>{const mv=su.items.filter(isBlocking);if(!mv.length)return;su.items=su.items.filter(i=>!isBlocking(i));
+function migrateBlocking(p){if(!p)return p;
+  p.scenes.forEach(sc=>sc.setups.forEach(su=>{const own=i=>isBlocking(i)||defaultScope(i)==='shot';const mv=su.items.filter(own);if(!mv.length)return;su.items=su.items.filter(i=>!own(i));
     su.shots.forEach((sh,k)=>{const c=clone(mv);c.forEach(i=>i.scope='shot');if(k){const m={};c.forEach(i=>{const n=rid();m[i.id]=n;i.id=n;});c.forEach(i=>{if(i.owner&&m[i.owner])i.owner=m[i.owner];});sh.items.forEach(i=>{if(i.owner&&m[i.owner])i.owner=m[i.owner];});}sh.items=c.concat(sh.items);});}));
   p.blockV=2;return p;}
 {const _n=normalize;normalize=function(p){return migrateBlocking(_n(p));};}
