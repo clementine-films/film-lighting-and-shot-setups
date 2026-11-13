@@ -1051,7 +1051,7 @@ function renderCanvas(){
   cv.setAttribute('viewBox',`${V.vx} ${V.vy} ${w} ${h}`);
   const su=setup(),sh=shot();const items=activeItems(su,sh);const nums=lightNumbers(items);const ids=selIds();
   let out=`<rect x="${V.vx}" y="${V.vy}" width="${w}" height="${h}" fill="${C.bg}" data-bg="1"/>`+gridSVG(V.vx,V.vy,V.vx+w,V.vy+h,C,px);
-  if(V.ghost){su.shots.forEach(o=>{if(o.id===sh.id)return;const L1=renderItems(o.items,{C,px,nums:{},ghost:true,beams:false,labels:'min',ghostLabel:o.num,tag:'x'+o.id});out+=`<g pointer-events="none">${assemble(L1)}</g>`;});}
+  if(V.ghost){su.shots.forEach(o=>{if(o.id===sh.id)return;const L1=renderItems(o.items.filter(i=>!isBlocking(i)),{C,px,nums:{},ghost:true,beams:false,labels:'min',ghostLabel:o.num,tag:'x'+o.id});out+=`<g pointer-events="none">${assemble(L1)}</g>`;});}
   const L1=renderItems(items,{C,px,selSet:new Set(ids),nums,beams:V.beams,labels:V.labels,dims:V.dims,dimSel:true});
   out+=assemble(L1);
   // handles (single selection only)
@@ -1325,7 +1325,7 @@ function renderTree(){
   $('#tree').innerHTML=P.scenes.map(sc=>{const open=sc.id===cur.id;
     return `<div class="scene"><div class="sRow ${open?'cur':''}" data-scene="${sc.id}"><span class="sNum">${esc(sc.num)}</span><span class="sHead" title="${esc(sceneHeading(sc))}">${esc(sceneHeading(sc))}</span></div>
     ${open?sc.setups.map(su=>`<div class="setup"><div class="suRow ${su.id===cs.id?'cur':''}" data-setup="${su.id}">◐ ${esc(su.name)}${isTurn(su)?' <span class="turnTag" title="'+esc(buildLabel(su))+'">↺ turn</span>':''} <span style="color:var(--dim);font-size:10.5px">· ${su.items.filter(i=>LIB[i.t]&&LIB[i.t].kind==='light').length} lights</span></div>
-      <div class="shots">${su.shots.map(s=>`<span class="shotChip ${s.id===csh.id?'cur':''}" data-shot="${s.id}" data-su="${su.id}" title="${esc(s.desc)}">${esc(s.num)}</span>`).join('')}<button class="addMini" data-addshot="${su.id}" title="New shot (copies this shot's camera)">+ shot</button></div></div>`).join('')+`<div style="margin:2px 0 6px 18px"><button class="addMini" data-addsetup="${sc.id}" title="New lighting setup (copies walls, set pieces & actors)">+ setup</button></div>`:''}</div>`;}).join('');
+      <div class="shots">${su.shots.map(s=>`<span class="shotChip ${s.id===csh.id?'cur':''}" data-shot="${s.id}" data-su="${su.id}" title="${esc(s.desc)}">${esc(s.num)}</span>`).join('')}<button class="addMini" data-addshot="${su.id}" title="New shot (copies this shot's characters and camera)">+ shot</button></div></div>`).join('')+`<div style="margin:2px 0 6px 18px"><button class="addMini" data-addsetup="${sc.id}" title="New lighting setup (copies walls, set pieces & actors)">+ setup</button></div>`:''}</div>`;}).join('');
   const sc=cur,su=cs,sh=csh;
   $('#crumb').innerHTML=`<span class="slug">SC ${esc(sc.num)}</span> <b>${esc(sceneHeading(sc))}</b> › ${esc(su.name)} › <span class="slug" style="color:var(--teal)">${esc(sh.num)}</span> ${esc(sh.size)}${sh.move&&sh.move!=='Static'?' · '+esc(sh.move):''}${sh.desc?' — '+esc(sh.desc):''}`;
   $('#shotTabs').innerHTML=su.shots.map(s=>`<span class="shotChip ${s.id===sh.id?'cur':''}" data-shot="${s.id}" data-su="${su.id}">${esc(s.num)}</span>`).join('')+`<button class="addMini" data-addshot="${su.id}">+ shot</button>`;
@@ -1337,10 +1337,10 @@ function treeClick(e){
   const sR=t.closest('[data-scene]');if(sR){V.sceneId=sR.dataset.scene;V.setupId=null;V.shotId=null;fixView();V.sel=null;changed(true,true);setTimeout(fit,0);return;}
   const suR=t.closest('[data-setup]');if(suR){V.setupId=suR.dataset.setup;V.shotId=null;fixView();V.sel=null;changed(true,true);return;}
   const shR=t.closest('[data-shot]');if(shR){V.setupId=shR.dataset.su;V.shotId=shR.dataset.shot;fixView();if(V.sel&&!findItem(V.sel))V.sel=null;changed(true,true);return;}
-  const aS=t.closest('[data-addshot]');if(aS){snap();const su=scene().setups.find(s=>s.id===aS.dataset.addshot);const base=(su.id===setup().id?shot():su.shots[su.shots.length-1]);const n=mkShot(nextShotNum(scene()));n.size=base.size;n.items=reId(clone(base.items));su.shots.push(n);V.setupId=su.id;V.shotId=n.id;V.sel=null;V.rightTab='shot';changed();toast(`Shot ${n.num} added — camera copied from ${base.num}`);return;}
+  const aS=t.closest('[data-addshot]');if(aS){snap();const su=scene().setups.find(s=>s.id===aS.dataset.addshot);const base=(su.id===setup().id?shot():su.shots[su.shots.length-1]);const n=mkShot(nextShotNum(scene()));n.size=base.size;n.items=reId(clone(base.items));su.shots.push(n);V.setupId=su.id;V.shotId=n.id;V.sel=null;V.rightTab='shot';changed();toast(`Shot ${n.num} added — characters and camera copied from ${base.num}. Changes here won't touch ${base.num}.`);return;}
   const aU=t.closest('[data-addsetup]');if(aU){snap();const sc=scene();const cur=setup();const letter=String.fromCharCode(65+sc.setups.length);const su=mkSetup('Setup '+letter);
     su.items=clone(cur.items.filter(i=>(i.t==='line'&&i.kind==='wall')||(LIB[i.t]&&['set','talent','text','power'].includes(LIB[i.t].kind))));reId(su.items);
-    su.shots.push(mkShot(nextShotNum(sc)));sc.setups.push(su);V.setupId=su.id;V.shotId=su.shots[0].id;V.sel=null;V.rightTab='shot';changed();toast(`${su.name} added — set, actors & power copied; lights cleared`);return;}
+    {const n0=mkShot(nextShotNum(sc));n0.items=reId(clone(blockingOf(shot().items)));su.shots.push(n0);}sc.setups.push(su);V.setupId=su.id;V.shotId=su.shots[0].id;V.sel=null;V.rightTab='shot';changed();toast(`${su.name} added — set, characters & power copied; lights cleared`);return;}
 }
 $('#tree').addEventListener('click',treeClick);$('#shotTabs').addEventListener('click',treeClick);
 $('#addScene').addEventListener('click',()=>{snap();const n=P.scenes.reduce((m,s)=>Math.max(m,parseInt(s.num)||0),0)+1;const sc=mkScene(n);P.scenes.push(sc);V.sceneId=sc.id;V.setupId=null;V.shotId=null;fixView();V.sel=null;V.rightTab='shot';changed();setTimeout(fit,0);});
@@ -1726,7 +1726,7 @@ $('#bProjects').onclick=async()=>{openModal('<h3>Projects</h3><div class="empty"
 };
 $('#bHelp').onclick=()=>openModal(`<h3>How to use it</h3>
 <div style="font-size:12.5px;color:#c9ced5;line-height:1.55;margin-bottom:12px">
-<b>1. Break it down.</b> Open the library panel (top-left button or <b>[</b>) to add scenes, setups and shots, or import your shot list from the <b>Shot list</b> button. A new setup carries over the walls, set pieces, actors and power, but not the lights. For the reverse angle, use <b>Make turnaround</b> (Shot tab ▸ Manage): it copies the room, actors and lights without the camera and marks the setup <b>↺ turn</b>. You can also set any setup’s <b>Build</b> to New lighting or Turnaround. Your Shotlist Sequencer’s Shot List MASTER can be pasted straight into <b>Shot list ▸ Import a shot list</b>.<br>
+<b>1. Break it down.</b> Open the library panel (top-left button or <b>[</b>) to add scenes, setups and shots, or import your shot list from the <b>Shot list</b> button. A new setup carries over the walls, set pieces, actors and power, but not the lights. For the reverse angle, use <b>Make turnaround</b> (Shot tab ▸ Manage): it copies the room, actors and lights without the camera and marks the setup <b>↺ turn</b>. You can also set any setup’s <b>Build</b> to New lighting or Turnaround. Each shot keeps its own characters and camera: <b>+ shot</b> starts from a copy of the shot you’re on, and moving, changing or deleting a character or the camera only changes that shot. Your Shotlist Sequencer’s Shot List MASTER can be pasted straight into <b>Shot list ▸ Import a shot list</b>.<br>
 <b>2. Build the room.</b> Press <b>B</b> and drag out a room — its size shows as you drag — or click once to type exact dimensions. For odd shapes use <b>W</b>: walls stay straight on their own, each wall shows its length, and you can type a length and press Enter. Each side of a room is its own wall: tap one to change or delete just that side, or double-click to select the whole room. Start a wall on another wall and they join. With a wall selected, <b>Add corner</b> bends it and <b>Cut gap</b> removes a stretch. To curve a wall, dolly track or cable, drag the round handle with the orange ring in the middle of it; drag it back to the line to straighten. Roads, sidewalks, driveways, fences, curbs and hedge rows have a <b>Curve°</b> setting in the bar above the plan. Doors and windows make their own opening and move with the wall. <b>Floor plan</b> (bottom bar) puts an image or PDF under the grid to trace over, and <b>Lock walls</b> keeps them still once the room is right.<br>
 <b>3. Furnish and light it.</b> Pick anything from the library and click to drop it. Furniture sits flush only when you drop it within a few inches of a wall (hold <kbd>Option</kbd>/<kbd>Alt</kbd> while dragging to place it freely), and wall-mounted pieces (TV, mirror, shelf) attach to the wall and move with it. Drop a camera on a dolly and they move as one; a dolly dropped on track lines up with it. The bar above the plan shows the selected item's size, angle and the settings you change most; <b>More…</b> opens everything.<br>
 <b>4. Block it.</b> Select an actor or camera and press <b>Draw move</b>. To add more stops later, select the move and press <b>Continue</b>. The path stays attached: move the actor or camera and the path follows; drag the path and the whole move goes together. Points snap to actors, marks, cameras and dolly track.<br>
@@ -1818,7 +1818,7 @@ function importShotList(txt){const rows=parseDelimited(txt);if(rows.length<2)ret
       if(!su){const f=sc.setups[0];if(sc.setups.length===1&&!f.items.length&&f.shots.every(blank)&&f.name==='Setup A'&&!f._imp){su=f;su.name=nm;}else{su=mkSetup(nm);sc.setups.push(su);}}su._imp=1;}
     let num=g('shot');if(/^[a-z]{1,2}$/i.test(num))num=sc.num+num.toUpperCase();
     let sh=null;if(num)sc.setups.forEach(s=>s.shots.forEach(x=>{if(String(x.num).toLowerCase()===num.toLowerCase())sh=x;}));
-    if(sh)updated++;else{sh=su.shots.find(blank);if(sh){if(num)sh.num=num;}else{sh=mkShot(num||nextShotNum(sc));su.shots.push(sh);}added++;}
+    if(sh)updated++;else{sh=su.shots.find(blank);if(sh){if(num)sh.num=num;}else{sh=mkShot(num||nextShotNum(sc));su.shots.push(sh);seedShot(su,sh);}added++;}
     sh._imp=1;if(g('size'))sh.size=pick(SIZES,g('size'));if(g('angle'))sh.angle=pick(ANGLES,g('angle'));if(g('move'))sh.move=pick(MOVES,g('move'));if(g('desc'))sh.desc=g('desc');
     const nt=[g('notes'),g('lens')?'Lens: '+g('lens'):''].filter(Boolean).join(' · ');if(nt)sh.notes=nt;});
   P.scenes.forEach(sc=>sc.setups.forEach(su=>{delete su._imp;su.shots.forEach(sh=>delete sh._imp);}));normalize(P);fixView();changed();return {added,updated};}
@@ -1833,7 +1833,7 @@ function applyScriptDesk(o,withText){const IE={'INT':'INT.','EXT':'EXT.','INT/EX
     const own=fresh||sc.sd;if(x.ie&&IE[x.ie]&&(own||sc.loc==='LOCATION'))sc.ie=IE[x.ie];if(x.loc&&(own||sc.loc==='LOCATION'))sc.loc=x.loc;if(x.tod&&own)sc.tod=x.tod;if(x.syn&&(!sc.desc||sc.sdDesc===sc.desc)){sc.desc=x.syn;sc.sdDesc=x.syn;}
     const text=withText&&typeof x.text==='string'?x.text:null;if(text!=null&&(!sc.script||sc.sdH===sdHash(sc.script))){sc.script=text;sc.sdH=sdHash(text);}sc.sd=1;
     (x.setups||[]).forEach(u=>{const sn=String(u.label||'').trim();if(!sn)return;let sh=null;sc.setups.forEach(su=>su.shots.forEach(q=>{if(String(q.num).toLowerCase()===sn.toLowerCase())sh=q;}));
-      if(!sh){const su=sc.setups[0];sh=su.shots.find(q=>!q.desc&&!q.items.length&&!q.notes&&!(q.cover||[]).length&&!q.sd);if(sh)sh.num=sn;else{sh=mkShot(sn);su.shots.push(sh);}shN++;}else shU++;
+      if(!sh){const su=sc.setups[0];sh=su.shots.find(q=>!q.desc&&!q.items.length&&!q.notes&&!(q.cover||[]).length&&!q.sd);if(sh)sh.num=sn;else{sh=mkShot(sn);su.shots.push(sh);seedShot(su,sh);}shN++;}else shU++;
       sh.sd=1;if(u.desc&&(!sh.desc||sh.sdDesc===sh.desc)){sh.desc=u.desc;sh.sdDesc=u.desc;const low=u.desc.toLowerCase();const z=SIZES.find(k=>low===k.toLowerCase()||low.startsWith(k.toLowerCase()+' ')||low.startsWith(k.toLowerCase()+','));if(z)sh.size=z;}
       if(u.shot)sh.status='Shot';
       if(text!=null&&sc.script===text&&u.e>u.s&&u.e<=text.length){sh.cover=[{s:u.s,e:u.e,t:text.slice(u.s,u.e)}];linked++;}});});
@@ -2739,8 +2739,8 @@ function buildField(sc,su){const others=sc.setups.filter(x=>x.id!==su.id);let v=
 // new setup facing the other way: same room, actors, lights and grip as a starting point; no cameras
 function makeTurnaround(){snap();const sc=scene(),src=setup();const su=newSetupFrom(sc,null);
   su.items=clone(src.items.filter(i=>i.t!=='camera'));reId(su.items);su.build='turn:'+src.id;
-  const sh=mkShot(nextShotNum(sc));su.shots.push(sh);normalize(P);changed();gotoShot(sh.id);
-  toast(`${su.name} is a turnaround of ${src.name}. Room, actors and lights are copied: move whatever is now in frame, then place the camera.`,6000);}
+  const sh=mkShot(nextShotNum(sc));sh.items=reId(clone(blockingOf(shot().items)));su.shots.push(sh);normalize(P);changed();gotoShot(sh.id);
+  toast(`${su.name} is a turnaround of ${src.name}. Room, characters and lights are copied: move whatever is now in frame, then place the camera.`,6000);}
 
 /* ---- Shotlist Sequencer → Shot Plot: understand its columns and words ---- */
 const SEQ_SIZE={'ews':'EWS','establishing':'EWS','wide':'WS','wide zoom':'WS','master':'WS','full shot':'FS','mw':'MWS','mw zoom':'MWS','cowboy':'MWS','medium':'MS','three shot / group':'MS','two shot':'2-Shot',
@@ -2784,7 +2784,7 @@ function seqWord(map,list,v){const k=String(v||'').trim().toLowerCase();if(!k)re
     let num=g('shotId')||shotRaw;if(/^[a-z]{1,2}$/i.test(num))num=sc.num+num.toUpperCase();
     let sh=null;if(num)sc.setups.forEach(s=>s.shots.forEach(x=>{if(String(x.num).toLowerCase()===num.toLowerCase())sh=x;}));
     if(sh){updated++;if(L&&!su.shots.includes(sh)){sc.setups.forEach(s=>{s.shots=s.shots.filter(x=>x!==sh);});su.shots.push(sh);}}
-    else{sh=su.shots.find(blank);if(sh){if(num)sh.num=num;}else{sh=mkShot(num||nextShotNum(sc));su.shots.push(sh);}added++;}
+    else{sh=su.shots.find(blank);if(sh){if(num)sh.num=num;}else{sh=mkShot(num||nextShotNum(sc));su.shots.push(sh);seedShot(su,sh);}added++;}
     sh._imp=1;const extra=[];
     const t=g('type');if(t){const [z,ok]=seqWord(SEQ_SIZE,SIZES,t);const a=SEQ_ANGLE[t.toLowerCase()];if(z)sh.size=z;if(a)sh.angle=a;if((!ok&&!a)||(!z&&!a))extra.push('Type: '+t);}
     const mv=g('mvmt');if(mv){const [z,ok]=seqWord(SEQ_MOVE,MOVES,mv);if(z)sh.move=z;if(!ok)extra.push('Move: '+mv);}
@@ -2928,6 +2928,24 @@ function bentSel(it,px){const G=bendGeo(it);return `<path d="${G.band(-G.wid/2-.
   if(it.t==='line'&&lineCurved(it)){const sg=q.querySelector('[data-seg]');if(sg)sg.closest('label').outerHTML=`<span class="qm">${fmtFt(lineLen(it.pts))} along the curve</span>`;}
   if(it.t==='line'&&CURVE_LINES.has(it.kind)&&lineCurved(it)&&!q.querySelector('[data-act="uncurve"]')){const sep=q.querySelector('.qsep');const html=`<button class="btn sm" data-act="uncurve" title="Make every segment straight again">Straighten curves</button>`;if(sep)sep.insertAdjacentHTML('beforebegin',html);}};}
 $('#quick').addEventListener('click',e=>{const b=e.target.closest('[data-act="uncurve"]');if(!b)return;e.stopPropagation();const it=selItem();if(!it||it.t!=='line')return;snap();const caps=it.kind==='wall'?capOpenings([it]):[];it.pts.forEach(q=>delete q.c);reseatOpenings(caps);changed();toast('Straightened');},true);
+/* ============================================================
+   Blocking belongs to the shot
+   Characters, their marks and their moves live on each shot, like the
+   camera does. A new shot starts as a copy of the shot you're on, and
+   moving or deleting a character only changes that shot.
+   ============================================================ */
+function isBlocking(it){return it.t==='line'?it.kind==='actor':!!(LIB[it.t]&&(LIB[it.t].kind==='talent'||LIB[it.t].kind==='mark'));}
+{const _ds=defaultScope;defaultScope=function(it){return isBlocking(it)?'shot':_ds(it);};}
+function blockingOf(items){return items.filter(isBlocking);}
+// a shot made some other way (shot-list import) starts from its neighbour in the setup
+function seedShot(su,sh){if(!su||!sh||sh.items.length)return;const i=su.shots.indexOf(sh);const prev=su.shots.slice(0,Math.max(0,i)).reverse().find(s=>s.items.length)||su.shots.slice(i+1).find(s=>s.items.length);if(prev)sh.items=reId(clone(prev.items));}
+// older projects kept characters on the setup, shared by every shot: give each shot its own copy
+function migrateBlocking(p){if(!p||p.blockV>=2)return p;
+  p.scenes.forEach(sc=>sc.setups.forEach(su=>{const mv=su.items.filter(isBlocking);if(!mv.length)return;su.items=su.items.filter(i=>!isBlocking(i));
+    su.shots.forEach((sh,k)=>{const c=clone(mv);c.forEach(i=>i.scope='shot');if(k){const m={};c.forEach(i=>{const n=rid();m[i.id]=n;i.id=n;});c.forEach(i=>{if(i.owner&&m[i.owner])i.owner=m[i.owner];});sh.items.forEach(i=>{if(i.owner&&m[i.owner])i.owner=m[i.owner];});}sh.items=c.concat(sh.items);});}));
+  p.blockV=2;return p;}
+{const _n=normalize;normalize=function(p){return migrateBlocking(_n(p));};}
+{const _d=demoProject;demoProject=function(){return migrateBlocking(_d());};}
 const BRANDFF=(()=>{let o='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.type===5&&/EB Garamond|Lato/.test(r.cssText))o+=r.cssText;}catch(e){}}return o;})();
 /* ============================================================
    Export
@@ -2957,7 +2975,7 @@ function buildSheet0(sc,su,sh,X){
   const ox=DX+(DW-(b.x1-b.x0)*s)/2,oy=DY+(DH-(b.y1-b.y0)*s)/2;
   const vx0=b.x0-(ox-DX)/s,vy0=b.y0-(oy-DY)/s,vx1=vx0+DW/s,vy1=vy0+DH/s;
   let g=`<rect x="${vx0}" y="${vy0}" width="${vx1-vx0}" height="${vy1-vy0}" fill="${C.bg}"/>`+(X.grid?gridSVG(vx0,vy0,vx1,vy1,C,px):'');
-  if(X.ghost&&!sh._setup)su.shots.forEach(o=>{if(o.id===sh.id)return;g+=assemble(renderItems(o.items,{C,px,nums:{},ghost:true,beams:false,labels:'min',ghostLabel:o.num,tag:'s'+o.id}));});
+  if(X.ghost&&!sh._setup)su.shots.forEach(o=>{if(o.id===sh.id)return;g+=assemble(renderItems(o.items.filter(i=>!isBlocking(i)),{C,px,nums:{},ghost:true,beams:false,labels:'min',ghostLabel:o.num,tag:'s'+o.id}));});
   g+=assemble(renderItems(items,{C,px,nums,beams:X.beams,labels:X.labels==='min'?'min':'full',labAuto:X.labels!=='full'&&X.labels!=='min',dims:X.dims,tag:'sheet'}));
   const pw=powerFor(items);const S=P.settings;const cont=S.volts*S.breaker*.8;
   const F="Lato,Helvetica,Arial,sans-serif",M="'Courier New',Courier,monospace",G="'EB Garamond',Garamond,Georgia,serif";
@@ -3028,7 +3046,7 @@ const CREDIT_ROLES=[['director','Director'],['dp','DP'],['gaffer','Gaffer'],['pr
 function creditLine(){const c=P.credits||{};return CREDIT_ROLES.filter(([k])=>c[k]&&String(c[k]).trim()).map(([k,l])=>`${l}: ${String(c[k]).trim()}`).join('   ·   ');}
 // ---- Multi-page PDF export: contents, setup pages, shot sheets, optional overview ----
 const natCmp=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});
-function setupShot(su){const items=[];su.shots.forEach(sh=>{const pick=sh.items.filter(i=>i.t==='camera'||(i.t==='line'&&(i.kind==='cammove'||i.kind==='track'))||(LIB[i.t]&&LIB[i.t].kind==='camgear'));const cl=reId(clone(pick));cl.forEach(i=>{if(i.t==='camera')i.shotTag=sh.num;});items.push(...cl);});
+function setupShot(su){const items=[];su.shots.forEach(sh=>{const pick=sh.items.filter(i=>i.t==='camera'||(i.t==='line'&&(i.kind==='cammove'||i.kind==='track'))||(LIB[i.t]&&LIB[i.t].kind==='camgear'));const cl=reId(clone(pick));cl.forEach(i=>{if(i.t==='camera')i.shotTag=sh.num;});items.push(...cl);});if(su.shots[0]&&typeof blockingOf==='function')items.unshift(...reId(clone(blockingOf(su.shots[0].items))));
   return {_setup:true,id:'__setup_'+su.id,num:su.name,items,size:'',angle:'',move:'',desc:'',notes:'',cover:[]};}
 function exportRows(X){const sc0=scene(),su0=setup(),sh0=shot();const all=allShots();let rows;
   if(X.scope==='shot')rows=all.filter(r=>r.sh.id===sh0.id);
