@@ -300,6 +300,8 @@ body.narrow #left{left:0} body.narrow #right{right:0}
 #exBar .exBtns{display:flex;gap:6px;align-items:center}
 #exBar .exX{background:none;border:0;color:var(--text);font-size:18px;line-height:1;cursor:pointer;padding:0 4px}
 @media (max-width:640px){#exBar{left:60px;right:8px;transform:none;max-width:none}#exBar span{display:none}}
+.zGrp{display:inline-flex;align-items:center;gap:3px}
+.zGrp .zb{min-width:26px;padding:2px 6px;font-size:13px;line-height:1}
 </style>
 </head>
 <body>
@@ -725,7 +727,15 @@ function renderItems(items,o){
   // o: {C, px, sel, nums, ghost:bool, labels}
   const C=o.C,px=o.px;if(!o.openings)o.openings=items.filter(i=>i.t==='door'||i.t==='window');if(!o.byId){o.byId={};items.forEach(i=>o.byId[i.id]=i);}const L1={beams:'',floor:'',walls:'',set:'',lines:'',grip:'',lights:'',cam:'',talent:'',labels:'',hit:''};
   const fs=(o.tag==='sheet'?12.5:11)*px;const sw=1.4*px;
-  items.forEach(it=>{
+  const ZK=['floor','walls','set','lines','grip','lights','cam','talent'];L1.pieces=[];const NN=items.length;
+  items.forEach((it,idx)=>{const b0={};ZK.forEach(k=>b0[k]=L1[k].length);const g0=L1.gz?L1.gz.length:0;
+    drawOne(it);
+    let html='',rank=null,sub=0;
+    if(L1.gz&&L1.gz.length>g0){for(let i=g0;i<L1.gz.length;i++){html+=L1.gz[i][1];if(rank===null){rank=0;sub=(L1.gz[i][0]||0)/10;}}}
+    ZK.forEach(k=>{if(L1[k].length>b0[k]){html+=L1[k].slice(b0[k]);if(rank===null)rank=ZRANK[k];}});
+    if(html)L1.pieces.push({id:it.id,key:typeof it.zk==='number'?it.zk:zBase(rank,idx,NN,sub),html});
+  });
+  function drawOne(it){
     const sel=o.selSet?o.selSet.has(it.id):o.sel===it.id;
     if(it.t==='line'){drawLine(it,L1,o,sel);return;}
     const L=LIB[it.t];if(!L)return;
@@ -805,7 +815,7 @@ function renderItems(items,o){
       if(t)L1.labels+=`<text ${o.ghost?'':`data-lid="${it.id}" data-p="2" data-ax="${it.x}" data-ay="${it.y}" data-ar="1"`} x="${it.x}" y="${it.y+1.6+fs}" text-anchor="middle" font-family="${C.mono}" font-size="${fs*.9}" fill="${it.t==='gen'||it.t==='outlet'?'#f08c3c':C.sub}" pointer-events="none" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}">${esc(t)}</text>`;
       return;
     }
-  });
+  }
   return L1;
 }
 function gripExtent(it){if(it.t==='frame')return (FRAME_SIZES[it.size]||6)/2*(it.orient==='Overhead'?1:.3)+.5;if(it.shape==='flag'||it.t==='flag'||it.t==='negfill')return .9;return .9;}
@@ -941,7 +951,7 @@ function gridSVG(x0,y0,x1,y1,C,px){let a='',b='';const sx=Math.floor(x0),ex=Math
   for(let x=sx;x<=ex;x++)(x%5===0?b:null)===null?a+=`M${x} ${y0}V${y1}`:b+=`M${x} ${y0}V${y1}`;
   for(let y=sy;y<=ey;y++)(y%5===0?b:null)===null?a+=`M${x0} ${y}H${x1}`:b+=`M${x0} ${y}H${x1}`;
   return `<path d="${a}" stroke="${C.grid}" stroke-width="${px}"/><path d="${b}" stroke="${C.grid5}" stroke-width="${1.2*px}"/>`;}
-function assemble(L1){return L1.floor+(L1.gz?L1.gz.sort((a,b)=>a[0]-b[0]).map(x=>x[1]).join(''):'')+(L1.walls||'')+L1.set+L1.beams+L1.lines+L1.grip+L1.lights+L1.cam+L1.talent+L1.labels;}
+function assemble(L1){if(L1.pieces){const ps=L1.pieces.slice().sort((a,b)=>a.key-b.key);let out='',bd=false;ps.forEach(p=>{if(!bd&&p.key>=ZBEAMS){out+=L1.beams;bd=true;}out+=p.html;});if(!bd)out+=L1.beams;return out+L1.labels;}return L1.floor+(L1.gz?L1.gz.sort((a,b)=>a[0]-b[0]).map(x=>x[1]).join(''):'')+(L1.walls||'')+L1.set+L1.beams+L1.lines+L1.grip+L1.lights+L1.cam+L1.talent+L1.labels;}
 
 /* ============================================================
    Canvas
@@ -2552,7 +2562,7 @@ function groundGlyph(it,L,C,px){const w=+it.w||10,h=+it.h||10,dk=gDark(C),x0=-w/
 // extra fields for roads and sidewalks
 function groundFields(it,fld,sel,inp){if(it.t==='road')return `<div class="f2">${fld('Lanes',sel('lanes',['1','2','3','4','5','6'],String(it.lanes||2)))}${fld('Center line',sel('center',['Double yellow','Single yellow','Dashed white','One-way'],it.center||'Double yellow'))}</div><div class="pSub">Width is the full road, curb to curb. A typical lane is 10–12 ft. Rotate it with the handle.</div>`;
   if(it.t==='sidewalk')return fld('Curb',sel('curb',['Right edge','Left edge','Both edges','None'],it.curb||'Right edge'))+`<div class="pSub">Joint lines every 5 ft. Put the curb on the road side.</div>`;
-  if(LIB[it.t]&&LIB[it.t].ground)return `<div class="pSub">Ground surfaces sit under everything else, so you can place cars, people and lights on top.</div>`;return '';}
+  if(LIB[it.t]&&LIB[it.t].ground)return `<div class="pSub">Ground surfaces sit under everything else, so you can place track, cars, people and lights on top. To change what sits above what, use Order in the bar above the plan.</div>`;return '';}
 // the library list is built once at start-up; rebuild it so items defined later (this file, grip extras) appear, with each group kept together
 {const arr=libEntries();const first={};arr.forEach((e,i)=>{const g=(e.kit?'k':'')+e.cat+'|'+e.group;if(!(g in first))first[g]=i;});
   if(first['Set|Street']!=null)first['Set|Ground & roads']=first['Set|Street']-.5;const ord=arr.map((e,i)=>[first[(e.kit?'k':'')+e.cat+'|'+e.group],i,e]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]).map(x=>x[2]);
@@ -2801,6 +2811,53 @@ document.addEventListener('click',async e=>{
   else if(a==='keep'){P.example=false;P.title=(P.title||'').replace(/^Example:\s*/,'')||'Untitled Production';changed();}
   else if(a==='hide'){V.exHide=true;renderExBar();}
 });
+/* ============================================================
+   Stacking order: bring forward / send backward
+   Each item draws in its natural layer (ground, floor marks & track,
+   walls, set, beams, moves, grip, lights, camera, talent). An item can
+   be lifted or lowered with it.zk, which overrides its place in the stack.
+   ============================================================ */
+const ZRANK={floor:1,walls:2,set:3,lines:5,grip:6,lights:7,cam:8,talent:9};
+const ZBEAMS=4;
+function zBase(rank,idx,n,sub){return rank+.3*Math.min(sub||0,.99)+.69*(idx+1)/(n+2);}
+function stackOf(items){const L1=renderItems(items,{C:THEMES.dark,px:.05,nums:{},beams:false,labels:false});return (L1.pieces||[]).slice().sort((a,b)=>a.key-b.key);}
+function boxOf(id){let bb=null;cv.querySelectorAll(`[data-id="${id}"]`).forEach(el=>{try{const b=el.getBBox(),m=el.getCTM(),root=cv.getCTM();if(!b.width&&!b.height)return;
+  const inv=root.inverse().multiply(m);const pts=[[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]].map(([x,y])=>({x:inv.a*x+inv.c*y+inv.e,y:inv.b*x+inv.d*y+inv.f}));
+  const x0=Math.min(...pts.map(p=>p.x)),x1=Math.max(...pts.map(p=>p.x)),y0=Math.min(...pts.map(p=>p.y)),y1=Math.max(...pts.map(p=>p.y));
+  bb=bb?{x0:Math.min(bb.x0,x0),x1:Math.max(bb.x1,x1),y0:Math.min(bb.y0,y0),y1:Math.max(bb.y1,y1)}:{x0,x1,y0,y1};}catch(e){}});return bb;}
+function hits(a,b){return a&&b&&a.x0<b.x1&&b.x0<a.x1&&a.y0<b.y1&&b.y0<a.y1;}
+function arrange(dir){const ids=selIds();if(!ids.length)return;const items=activeItems();
+  let st=stackOf(items);if(!st.length)return;
+  const sel=new Set(ids);const mine=st.filter(p=>sel.has(p.id));if(!mine.length)return;
+  const others=st.filter(p=>!sel.has(p.id));
+  const box={};const bx=id=>box[id]!==undefined?box[id]:(box[id]=boxOf(id));
+  const selBox=mine.map(p=>bx(p.id)).reduce((a,b)=>!a?b:!b?a:{x0:Math.min(a.x0,b.x0),x1:Math.max(a.x1,b.x1),y0:Math.min(a.y0,b.y0),y1:Math.max(a.y1,b.y1)},null);
+  const top=Math.max(...mine.map(p=>p.key)),bot=Math.min(...mine.map(p=>p.key));
+  let lo,hi;
+  if(dir==='front'){const mx=others.length?Math.max(...others.map(p=>p.key)):top;if(top>=mx&&bot>=mx){toast('Already on top');return;}lo=mx;hi=mx+1;}
+  else if(dir==='back'){const mn=others.length?Math.min(...others.map(p=>p.key)):bot;if(bot<=mn&&top<=mn){toast('Already at the bottom');return;}lo=mn-1;hi=mn;}
+  else if(dir==='up'){const ov=others.filter(p=>p.key>bot&&hits(bx(p.id),selBox));const above=ov.filter(p=>p.key>top);
+    const tgt=(above.length?above:ov).sort((a,b)=>a.key-b.key)[0];
+    if(!tgt){toast('Already above everything it overlaps');return;}
+    const nxt=others.filter(p=>p.key>tgt.key).sort((a,b)=>a.key-b.key)[0];lo=tgt.key;hi=nxt?nxt.key:tgt.key+1;}
+  else{const ov=others.filter(p=>p.key<top&&hits(bx(p.id),selBox));const below=ov.filter(p=>p.key<bot);
+    const tgt=(below.length?below:ov).sort((a,b)=>b.key-a.key)[0];
+    if(!tgt){toast('Already below everything it overlaps');return;}
+    const prv=others.filter(p=>p.key<tgt.key).sort((a,b)=>b.key-a.key)[0];lo=prv?prv.key:tgt.key-1;hi=tgt.key;}
+  snap();
+  // freeze everyone's current place so later additions don't reshuffle this order
+  st.forEach(p=>{const f=findItem(p.id);if(f&&typeof f.it.zk!=='number')f.it.zk=p.key;});
+  const n=mine.length;mine.sort((a,b)=>a.key-b.key).forEach((p,i)=>{const f=findItem(p.id);if(f)f.it.zk=lo+(hi-lo)*(i+1)/(n+1);});
+  changed();
+  toast({front:'Brought to front',back:'Sent to back',up:'Brought forward',down:'Sent backward'}[dir]);
+}
+function resetOrder(){const ids=selIds();if(!ids.length)return;snap();ids.forEach(id=>{const f=findItem(id);if(f)delete f.it.zk;});changed();toast('Back to its normal layer');}
+{const _rq=renderQuick;renderQuick=function(){_rq();const q=$('#quick');if(!q||!q.innerHTML||fromQuick)return;const sep=q.querySelector('.qsep:last-of-type')||q.querySelector('.qsep');if(!sep||q.querySelector('.zGrp'))return;
+  const ids=selIds();const custom=ids.some(id=>{const f=findItem(id);return f&&typeof f.it.zk==='number';});
+  sep.insertAdjacentHTML('beforebegin',`<span class="qsep"></span><span class="zGrp"><span class="qm">Order</span><button class="btn sm ico zb" data-z="back" title="Send to back (Shift+⌘/Ctrl+[)">⤓</button><button class="btn sm ico zb" data-z="down" title="Send backward (⌘/Ctrl+[)">↓</button><button class="btn sm ico zb" data-z="up" title="Bring forward (⌘/Ctrl+])">↑</button><button class="btn sm ico zb" data-z="front" title="Bring to front (Shift+⌘/Ctrl+])">⤒</button>${custom?'<button class="btn sm ghost" data-z="reset" title="Put it back in its normal layer">Reset</button>':''}</span>`);};}
+$('#quick').addEventListener('click',e=>{const b=e.target.closest('[data-z]');if(!b)return;e.stopPropagation();const d=b.dataset.z;if(d==='reset')resetOrder();else arrange(d);});
+document.addEventListener('keydown',e=>{if(!(e.metaKey||e.ctrlKey))return;if(e.code!=='BracketRight'&&e.code!=='BracketLeft')return;const t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable))return;if(!selIds().length)return;e.preventDefault();
+  const up=e.code==='BracketRight';arrange(e.shiftKey?(up?'front':'back'):(up?'up':'down'));});
 const BRANDFF=(()=>{let o='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.type===5&&/EB Garamond|Lato/.test(r.cssText))o+=r.cssText;}catch(e){}}return o;})();
 /* ============================================================
    Export
