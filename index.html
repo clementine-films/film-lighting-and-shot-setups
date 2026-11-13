@@ -1214,7 +1214,7 @@ function makeRoom(x,y,w,h){snap();const it=newLine('wall',[{x,y},{x:x+w,y},{x:x+
 function roomDialog(a){openModal(`<h3>Room size</h3><div class="pSub">Type the room's inside dimensions. Feet and inches both work: <b>12</b>, <b>12.5</b> or <b>12' 6"</b>.</div><div class="f2">${fld('Width (left to right)','<input class="in" id="rmW" value="14\'">')}${fld('Depth (top to bottom)','<input class="in" id="rmH" value="12\'">')}</div><div class="mFoot"><button class="btn" data-close>Cancel</button><button class="btn pri" id="rmOK">Create room</button></div>`);
   const go=()=>{const w=parseFt($('#rmW').value),h=parseFt($('#rmH').value);if(!(w>=1)||!(h>=1)){toast('Enter a width and depth of at least 1 ft');return;}closeModal();makeRoom(a.x,a.y,r2(w),r2(h));setTimeout(fit,0);};
   $('#rmOK').onclick=go;$('#modalBox').onkeydown=e=>{if(e.key==='Enter')go();};setTimeout(()=>{const f=$('#rmW');if(f){f.focus();f.select();}},0);}
-function draftSnap(w,e){const d=V.draft;const kind=d?d.kind:V.tool;const last=d&&d.pts.length?d.pts[d.pts.length-1]:null;const lockDef=kind==='wall'||kind==='track';const lock=!!last&&(lockDef?!e.shiftKey:e.shiftKey);
+function draftSnap(w,e){const d=V.draft;const kind=d?d.kind:V.tool;const last=d&&d.pts.length?d.pts[d.pts.length-1]:null;const lockDef=kind==='wall'||kind==='track'||(typeof STREET_KINDS!=='undefined'&&STREET_KINDS.has(kind));const lock=!!last&&(lockDef?!e.shiftKey:e.shiftKey);
   return snapPt(w,{kinds:SNAPK[kind],segKinds:kind==='cammove'?['track']:kind==='wall'?['wall']:null,align:lockDef?['wall',kind]:null,from:last,lock,alt:e.altKey,extra:d?d.pts.slice(0,-1).map(p=>({x:p.x,y:p.y,k:kind})):null});}
 function addDraftPt(w,e){let q=draftSnap(w,e);q={x:q.x,y:q.y};
   if(!V.draft){const kind=V.tool;let color=LINES[kind].color,label='',owner='';const nd0=Math.max(2.5,30/V.zoom);
@@ -1248,6 +1248,7 @@ function updHint(){let h='';const Y=s=>`<b style="color:#ffcf7a">${s}</b>`;
   else if(LINES[V.tool]){const k=V.tool,d=V.draft;
     if(d&&V.typed)h=`Length ${Y(esc(V.typed))} — press Enter to place the next point at exactly that distance`;
     else if(k==='wall')h=d?`${Y('Wall')} — click the next corner · type a length + Enter for an exact wall · click the first corner to close the room · Enter to finish · Backspace removes the last corner`:`${Y('Wall')} — click to start. Walls stay straight (0°/45°/90°) on their own; hold Shift for any angle`;
+    else if(typeof STREET_KINDS!=='undefined'&&STREET_KINDS.has(k))h=`${Y(LINES[k].name.replace(' (draw it)',''))} — ${d?'click the next point':'click to start'} · stays straight unless you hold Shift · type a length + Enter · Enter or double-click to finish · then drag the round handle on any stretch to curve it`;
     else if(k==='track')h=`${Y('Dolly track')} — click points; stays straight unless you hold Shift · type a length + Enter · Enter to finish`;
     else h=`${Y(LINES[k].name)} — ${d?'click each stop':(k==='actor'?'start on an actor (it attaches and follows them)':k==='cammove'?'start on a camera (it attaches and follows it)':'click to start')} · points snap to actors, marks, cameras and track · Enter or double-click to finish`;}
   else if(V.tool==='pan')h='Drag to pan · scroll to zoom';
@@ -1284,7 +1285,7 @@ function renderQuick(){const q=$('#quick');if(!q||fromQuick)return;const ids=P?s
    ============================================================ */
 function libIcon(key){
   const C=uiC();let inner;
-  if(LINES[key]){const it={t:'line',kind:key,pts:[{x:-1.3,y:.6},{x:1.3,y:-.6}],color:LINES[key].color};const L1={floor:'',set:'',beams:'',lines:'',grip:'',lights:'',cam:'',talent:'',labels:''};drawLine(it,L1,{C,px:.08,ghost:false},false);inner=(L1.floor+L1.set+L1.lines).replace(/data-id="[^"]*"/g,'');return `<svg viewBox="-1.6 -1.2 3.2 2.4">${inner}</svg>`;}
+  if(LINES[key]){const it={t:'line',kind:key,pts:[{x:-1.3,y:.6},{x:1.3,y:-.6}],color:LINES[key].color};const L1={floor:'',set:'',beams:'',lines:'',grip:'',lights:'',cam:'',talent:'',labels:''};drawLine(it,L1,{C,px:.08,ghost:false,icon:true},false);inner=((L1.gz?L1.gz.map(x=>x[1]).join(''):'')+L1.floor+L1.set+L1.lines).replace(/data-id="[^"]*"/g,'');return `<svg viewBox="-1.6 -1.2 3.2 2.4">${inner}</svg>`;}
   const L=libOf(key);const it=newItem(key,0,0,{});if(L.kind==='set'){const m=Math.max(it.w,it.h);it.w=it.w/m*2.2;it.h=it.h/m*2.2;}
   if(it.t==='frame'){it.size='4×4';}
   const L1=renderItems([it],{C,px:.08,nums:{},beams:false,labels:'min'});
@@ -1296,7 +1297,7 @@ function libEntries(){const arr=[];
   Object.entries(PRESETS).forEach(([k,p])=>arr.push({key:k,cat:p.cat,group:p.group||('Picksheet — '+(p.cat==='Grip'?'Grip':p.cat==='Power'?'Electric':'Camera')),name:p.name,kit:!p.group}));
   arr.push({key:'cable',cat:'Power',group:'Picksheet — Electric',name:'14/3 Stinger run (draw it)',line:true,kit:true});
   arr.push({key:'track',cat:'Camera',group:'Picksheet — Camera',name:'Procam dolly track (draw it, 12 ft max)',line:true,kit:true});
-  Object.values(LIB).filter(L=>!L.kit&&!['beefy','pigeon','quadbox'].includes(L.key)).forEach(L=>arr.push({key:L.key,cat:L.cat,group:L.group,name:L.name,w:L.kind==='light'?L.defaults.watts:null}));Object.entries(LINES).forEach(([k,L])=>arr.push({key:k,cat:L.cat,group:L.group,name:L.name,line:true}));return arr;}
+  Object.values(LIB).filter(L=>!L.kit&&!L.hideLib&&!['beefy','pigeon','quadbox'].includes(L.key)).forEach(L=>arr.push({key:L.key,cat:L.cat,group:L.group,name:L.name,w:L.kind==='light'?L.defaults.watts:null}));Object.entries(LINES).forEach(([k,L])=>arr.push({key:k,cat:L.cat,group:L.group,name:L.name,line:true}));return arr;}
 const LIBALL=libEntries();
 function renderLib(){
   $('#libCats').innerHTML=['Picksheet','All',...CATS].map(c=>`<button class="cat ${V.libCat===c?'on':''}" data-cat="${c}" ${c==='Picksheet'?'title="Only what\'s on your NYU Spring Narrative picksheet"':''}>${c==='Picksheet'?'★ Picksheet':c}</button>`).join('');
@@ -1379,6 +1380,7 @@ function panelItem(){
     if(it.kind==='actor')h+=fld('Character',inp('label',it.label))+fld('Action / note',inp('note',it.note||'','text','placeholder="crosses to counter"'))+fld('Color',inp('color',it.color,'color'));
     else if(it.kind==='cammove')h+=fld('Move label',inp('label',it.label,'text','placeholder="DOLLY IN, ARC LEFT…"'))+fld('Color',inp('color',it.color,'color'));
     else if(it.kind==='cable')h+=fld('Label',inp('label',it.label,'text','placeholder="e.g. 12/3 stinger, C2"'))+`<div class="note">Gear list counts this run as <b>${Math.ceil(lineLen(it.pts)/25)} × 25′ stinger(s)</b> (${Math.ceil(lineLen(it.pts))}′ drawn). Add some slack for going around doorways and up stands.</div>`;
+    else if(typeof STREET_KINDS!=='undefined'&&STREET_KINDS.has(it.kind))h+=streetFields(it);
     else if(it.kind==='track')h+=`<div class="note">${lineLen(it.pts).toFixed(1)}′ of track ≈ <b>${Math.ceil(lineLen(it.pts)/8)} × 8′ straight sections</b>. Leave room on both ends for the dolly's wheelbase.</div>`+fld('Label',inp('label',it.label));
     else{h+=fld('Label',inp('label',it.label));
       if(it.kind==='wall'){const rc=rectOf(it);
@@ -1727,7 +1729,7 @@ $('#bProjects').onclick=async()=>{openModal('<h3>Projects</h3><div class="empty"
 $('#bHelp').onclick=()=>openModal(`<h3>How to use it</h3>
 <div style="font-size:12.5px;color:#c9ced5;line-height:1.55;margin-bottom:12px">
 <b>1. Break it down.</b> Open the library panel (top-left button or <b>[</b>) to add scenes, setups and shots, or import your shot list from the <b>Shot list</b> button. A new setup carries over the walls, set pieces, actors and power, but not the lights. For the reverse angle, use <b>Make turnaround</b> (Shot tab ▸ Manage): it copies the room, actors and lights without the camera and marks the setup <b>↺ turn</b>. You can also set any setup’s <b>Build</b> to New lighting or Turnaround. Each shot keeps its own characters and camera: <b>+ shot</b> starts from a copy of the shot you’re on, and moving, changing or deleting a character or the camera only changes that shot. Your Shotlist Sequencer’s Shot List MASTER can be pasted straight into <b>Shot list ▸ Import a shot list</b>.<br>
-<b>2. Build the room.</b> Press <b>B</b> and drag out a room — its size shows as you drag — or click once to type exact dimensions. For odd shapes use <b>W</b>: walls stay straight on their own, each wall shows its length, and you can type a length and press Enter. Each side of a room is its own wall: tap one to change or delete just that side, or double-click to select the whole room. Start a wall on another wall and they join. With a wall selected, <b>Add corner</b> bends it and <b>Cut gap</b> removes a stretch. To curve a wall, dolly track or cable, drag the round handle with the orange ring in the middle of it; drag it back to the line to straighten. Roads, sidewalks, driveways, fences, curbs and hedge rows have a <b>Curve°</b> setting in the bar above the plan. Doors and windows make their own opening and move with the wall. <b>Floor plan</b> (bottom bar) puts an image or PDF under the grid to trace over, and <b>Lock walls</b> keeps them still once the room is right.<br>
+<b>2. Build the room.</b> Press <b>B</b> and drag out a room — its size shows as you drag — or click once to type exact dimensions. For odd shapes use <b>W</b>: walls stay straight on their own, each wall shows its length, and you can type a length and press Enter. Each side of a room is its own wall: tap one to change or delete just that side, or double-click to select the whole room. Start a wall on another wall and they join. With a wall selected, <b>Add corner</b> bends it and <b>Cut gap</b> removes a stretch. To curve a wall, dolly track or cable, drag the round handle with the orange ring in the middle of it; drag it back to the line to straighten. <b>Roads, sidewalks, curbs, fences and hedges</b> are drawn the same way as track: pick one from the library (Set ▸ Ground & roads or Street), click point to point, press Enter, then curve any stretch with its round handle. Set the width, lanes and curb side in the bar above the plan or the Item panel, and use <b>Continue</b> to keep building it out. Doors and windows make their own opening and move with the wall. <b>Floor plan</b> (bottom bar) puts an image or PDF under the grid to trace over, and <b>Lock walls</b> keeps them still once the room is right.<br>
 <b>3. Furnish and light it.</b> Pick anything from the library and click to drop it. Furniture sits flush only when you drop it within a few inches of a wall (hold <kbd>Option</kbd>/<kbd>Alt</kbd> while dragging to place it freely), and wall-mounted pieces (TV, mirror, shelf) attach to the wall and move with it. Drop a camera on a dolly and they move as one; a dolly dropped on track lines up with it. The bar above the plan shows the selected item's size, angle and the settings you change most; <b>More…</b> opens everything.<br>
 <b>4. Block it.</b> Select an actor or camera and press <b>Draw move</b>. To add more stops later, select the move and press <b>Continue</b>. The path stays attached: move the actor or camera and the path follows; drag the path and the whole move goes together. Points snap to actors, marks, cameras and dolly track.<br>
 <b>5. Track it.</b> Paste the scene's sides into the <b>Script</b> tab and link lines to each shot. The <b>Shot list</b> shows every shot with its lens, cast, power and status.<br>
@@ -2290,7 +2292,7 @@ def('sheers',{cat:'Set',group:'Wall-mounted',name:'Sheer Curtains',kind:'set',sh
 /* ---- department layers ---- */
 const LAYERS=[['light','Lighting'],['grip','Grip'],['camera','Camera'],['set','Set'],['pd','Production design'],['notes','Notes']];
 const HID={};
-function layerOf(it){if(it.t==='line')return it.kind==='wall'?'set':it.kind==='cable'?'light':(it.kind==='track'||it.kind==='cammove')?'camera':null;const L=LIB[it.t];if(!L)return null;if(L.layer)return L.layer;
+function layerOf(it){if(it.t==='line')return (it.kind==='wall'||(typeof STREET_KINDS!=='undefined'&&STREET_KINDS.has(it.kind)))?'set':it.kind==='cable'?'light':(it.kind==='track'||it.kind==='cammove')?'camera':null;const L=LIB[it.t];if(!L)return null;if(L.layer)return L.layer;
   if(L.kind==='light'||L.kind==='power')return 'light';if(L.kind==='grip')return 'grip';if(L.kind==='camera'||L.kind==='camgear')return 'camera';if(L.kind==='text'||it.t==='north')return 'notes';if(L.kind==='set')return L.group==='Architecture'?'set':'pd';return null;}
 function layerShown(it){const l=layerOf(it);if(!l||!HID[l])return true;return !!(it.withLight&&!HID.light);}
 {const _ri4=renderItems;renderItems=function(items,o){if(o&&(o.dimSel||o.tag==='sheet')&&LAYERS.some(([k])=>HID[k]))items=items.filter(layerShown);return _ri4(items,o);};}
@@ -2566,6 +2568,11 @@ function groundGlyph(it,L,C,px){const w=+it.w||10,h=+it.h||10,dk=gDark(C),x0=-w/
 function groundFields(it,fld,sel,inp){if(it.t==='road')return `<div class="f2">${fld('Lanes',sel('lanes',['1','2','3','4','5','6'],String(it.lanes||2)))}${fld('Center line',sel('center',['Double yellow','Single yellow','Dashed white','One-way'],it.center||'Double yellow'))}</div><div class="pSub">Width is the full road, curb to curb. A typical lane is 10–12 ft. Rotate it with the handle; bend it with Curve° in the bar above the plan.</div>`;
   if(it.t==='sidewalk')return fld('Curb',sel('curb',['Right edge','Left edge','Both edges','None'],it.curb||'Right edge'))+`<div class="pSub">Joint lines every 5 ft. Put the curb on the road side.</div>`;
   if(LIB[it.t]&&LIB[it.t].ground)return `<div class="pSub">Ground surfaces sit under everything else, so you can place track, cars, people and lights on top. To change what sits above what, use Order in the bar above the plan.</div>`;return '';}
+// streets you draw point to point (like dolly track)
+Object.assign(LINES,{road:{name:'Road',cat:'Set',group:'Ground & roads',color:null},sidewalk:{name:'Sidewalk',cat:'Set',group:'Ground & roads',color:null},curb:{name:'Curb',cat:'Set',group:'Ground & roads',color:null},
+  fence:{name:'Fence',cat:'Set',group:'Street',color:null},hedge:{name:'Hedge',cat:'Set',group:'Street',color:null}});
+// the old fixed-size versions still open in older projects but leave the library
+['road','sidewalk','fence','curb','hedge'].forEach(k=>{if(LIB[k])LIB[k].hideLib=true;});
 // the library list is built once at start-up; rebuild it so items defined later (this file, grip extras) appear, with each group kept together
 {const arr=libEntries();const first={};arr.forEach((e,i)=>{const g=(e.kit?'k':'')+e.cat+'|'+e.group;if(!(g in first))first[g]=i;});
   if(first['Set|Street']!=null)first['Set|Ground & roads']=first['Set|Street']-.5;const ord=arr.map((e,i)=>[first[(e.kit?'k':'')+e.cat+'|'+e.group],i,e]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]).map(x=>x[2]);
@@ -2928,6 +2935,80 @@ function bentSel(it,px){const G=bendGeo(it);return `<path d="${G.band(-G.wid/2-.
   if(it.t==='line'&&lineCurved(it)){const sg=q.querySelector('[data-seg]');if(sg)sg.closest('label').outerHTML=`<span class="qm">${fmtFt(lineLen(it.pts))} along the curve</span>`;}
   if(it.t==='line'&&CURVE_LINES.has(it.kind)&&lineCurved(it)&&!q.querySelector('[data-act="uncurve"]')){const sep=q.querySelector('.qsep');const html=`<button class="btn sm" data-act="uncurve" title="Make every segment straight again">Straighten curves</button>`;if(sep)sep.insertAdjacentHTML('beforebegin',html);}};}
 $('#quick').addEventListener('click',e=>{const b=e.target.closest('[data-act="uncurve"]');if(!b)return;e.stopPropagation();const it=selItem();if(!it||it.t!=='line')return;snap();const caps=it.kind==='wall'?capOpenings([it]):[];it.pts.forEach(q=>delete q.c);reseatOpenings(caps);changed();toast('Straightened');},true);
+/* ============================================================
+   Streets you draw: road, sidewalk, fence, curb and hedge are drawn
+   like dolly track (click point to point), and any stretch can be
+   curved with its round handle. The old fixed-size pieces still open
+   in older projects but are no longer in the library.
+   ============================================================ */
+const STREET_KINDS=new Set(['road','sidewalk','fence','curb','hedge']);
+const STREET_W={road:24,sidewalk:8,fence:.3,curb:.5,hedge:2.5};
+['road','sidewalk','fence','curb','hedge'].forEach(k=>CURVE_LINES.add(k));
+Object.assign(SNAPK,{road:['road','sidewalk','curb'],sidewalk:['road','sidewalk','curb','wall'],curb:['road','sidewalk','curb'],fence:['fence','wall','hedge'],hedge:['fence','wall','hedge']});
+function stW(it){const w=+it.w;return w>0?w:STREET_W[it.kind];}
+/* dense points along a path, following arcs */
+function sampleLine(p){const out=[{x:p[0].x,y:p[0].y}];
+  for(let i=1;i<p.length;i++){const a=p[i-1],b=p[i];const A=arcOf(a,b);
+    if(!A){out.push({x:b.x,y:b.y});continue;}
+    const sg=Math.sign(+b.c);const cx=A.mid.x-A.nx*sg*A.r,cy=A.mid.y-A.ny*sg*A.r;const a0=Math.atan2(a.y-cy,a.x-cx);
+    const crs=(a.x-cx)*(A.mid.y-cy)-(a.y-cy)*(A.mid.x-cx);const dir=crs>0?1:-1;const th=4*Math.atan(2*Math.abs(+b.c)/A.c);
+    const n=Math.max(4,Math.ceil(th*180/Math.PI/3));for(let k=1;k<=n;k++){const t=a0+dir*th*k/n;out.push({x:cx+A.r*Math.cos(t),y:cy+A.r*Math.sin(t)});}}
+  return out.filter((q,i,arr)=>!i||Math.hypot(q.x-arr[i-1].x,q.y-arr[i-1].y)>1e-4);}
+function segN(a,b){const L=Math.hypot(b.x-a.x,b.y-a.y)||1;return {x:-(b.y-a.y)/L,y:(b.x-a.x)/L};}
+function offsetPts(s,v){if(s.length<2)return s;const closed=Math.hypot(s[0].x-s[s.length-1].x,s[0].y-s[s.length-1].y)<.02&&s.length>3;
+  return s.map((q,i)=>{let n1=i>0?segN(s[i-1],q):null,n2=i<s.length-1?segN(q,s[i+1]):null;
+    if(closed&&(i===0||i===s.length-1)){n1=segN(s[s.length-2],s[s.length-1]);n2=segN(s[0],s[1]);}
+    if(!n1)return {x:q.x+n2.x*v,y:q.y+n2.y*v};if(!n2)return {x:q.x+n1.x*v,y:q.y+n1.y*v};
+    let mx=n1.x+n2.x,my=n1.y+n2.y;const ml=Math.hypot(mx,my);if(ml<1e-6)return {x:q.x+n1.x*v,y:q.y+n1.y*v};mx/=ml;my/=ml;const sc=1/Math.max(.35,mx*n1.x+my*n1.y);
+    return {x:q.x+mx*v*sc,y:q.y+my*v*sc};});}
+const ptsD=s=>'M'+s.map(q=>q.x.toFixed(3)+' '+q.y.toFixed(3)).join(' L');
+/* evenly spaced stations along the path: point + normal */
+function stations(s,step,skipEnds){const out=[];let acc=0,next=step;
+  for(let i=1;i<s.length;i++){const a=s[i-1],b=s[i];const L=Math.hypot(b.x-a.x,b.y-a.y);const n=segN(a,b);
+    while(next<=acc+L+1e-9){const t=(next-acc)/(L||1);out.push({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,nx:n.x,ny:n.y});next+=step;}acc+=L;}
+  if(skipEnds&&out.length&&Math.abs(next-step-acc)<.05)out.pop();return out;}
+function drawStreet(it,L1,o,sel){const C=o.C,px=o.px,p=it.pts;const dk=gDark(C);const icon=!!o.icon;
+  let W=stW(it);if(icon)W=Math.min(W,it.kind==='road'?1.4:it.kind==='sidewalk'?.9:W>1?.6:W);
+  const d=linePathD(p);const s=sampleLine(p);const ida=o.ghost?'':`data-id="${it.id}"`;const op=o.ghost?'opacity=".3"':'';
+  const hit=o.ghost||icon?'':`<path ${ida} d="${d}" fill="none" stroke="transparent" stroke-width="${Math.max(14*px,W)}" stroke-linejoin="round" style="pointer-events:stroke"/>`;
+  const selG=sel?`<path d="${d}" fill="none" stroke="#f2a93b" stroke-opacity=".45" stroke-width="${W+10*px}" stroke-linejoin="round"/>`:'';
+  const P=(v,attrs)=>`<path d="${ptsD(offsetPts(s,v))}" fill="none" ${attrs}/>`;
+  const paint=dk?'#e9ecef':'#ffffff',yellow='#e8b923',edge=dk?'#5d646d':'#9aa1a9';let g='';
+  if(it.kind==='road'){const asphalt=dk?'#3a3f46':'#c3c8ce';const n=Math.max(1,Math.min(8,Math.round(+it.lanes||2)));const c=it.center||'Double yellow';const hw=W/2;
+    g=`<path d="${d}" fill="none" stroke="${asphalt}" stroke-opacity="${dk?.95:.9}" stroke-width="${W}" stroke-linejoin="round"/>`;
+    if(!icon){g+=P(-hw+.5,`stroke="${paint}" stroke-width=".33"`)+P(hw-.5,`stroke="${paint}" stroke-width=".33"`);
+      for(let i=1;i<n;i++){const v=-hw+i*W/n;const mid=c!=='One-way'&&n%2===0&&i===n/2;
+        if(mid&&c==='Double yellow')g+=P(v-.3,`stroke="${yellow}" stroke-width=".3"`)+P(v+.3,`stroke="${yellow}" stroke-width=".3"`);
+        else if(mid&&c==='Single yellow')g+=P(v,`stroke="${yellow}" stroke-width=".35"`);
+        else g+=P(v,`stroke="${paint}" stroke-width=".33" stroke-dasharray="10 20"`);}}
+    else g+=`<path d="${d}" fill="none" stroke="${yellow}" stroke-width=".12"/>`;
+    (L1.gz||(L1.gz=[])).push([2,`<g ${op}>${selG}${g}${hit}</g>`]);return;}
+  if(it.kind==='sidewalk'){const conc=dk?'#555b62':'#e4e6e9';const hw=W/2;
+    g=`<path d="${d}" fill="none" stroke="${conc}" stroke-opacity="${dk?.75:.95}" stroke-width="${W}" stroke-linejoin="round"/>`;
+    if(!icon){let j='';stations(s,5,true).forEach(q=>{j+=`M${(q.x-q.nx*hw).toFixed(3)} ${(q.y-q.ny*hw).toFixed(3)} L${(q.x+q.nx*hw).toFixed(3)} ${(q.y+q.ny*hw).toFixed(3)} `;});
+      if(j)g+=`<path d="${j}" stroke="${edge}" stroke-width="${px}"/>`;g+=P(-hw,`stroke="${edge}" stroke-width="${px}"`)+P(hw,`stroke="${edge}" stroke-width="${px}"`);
+      const cb=it.curb||'Right side';const cs=`stroke="${dk?'#c9ced5':'#4a5059'}" stroke-width="${2.6*px}"`;
+      if(/Right|Both/.test(cb))g+=P(hw,cs);if(/Left|Both/.test(cb))g+=P(-hw,cs);}
+    (L1.gz||(L1.gz=[])).push([3,`<g ${op}>${selG}${g}${hit}</g>`]);return;}
+  if(it.kind==='curb'){g=`<path d="${d}" fill="none" stroke="${dk?'#c9ced5':'#4a5059'}" stroke-width="${W}" stroke-linejoin="round"/>`;
+    (L1.gz||(L1.gz=[])).push([4,`<g ${op}>${selG}${g}${hit}</g>`]);return;}
+  if(it.kind==='fence'){g=`<path d="${d}" fill="none" stroke="${C.setStroke}" stroke-width="${Math.max(W,3*px)}" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${C.setFill}" stroke-width="${Math.max(W-2*px,px)}" stroke-linejoin="round"/>`;
+    if(!icon){let posts='';const pp=[s[0]].concat(stations(s,8,true),[s[s.length-1]]);pp.forEach(q=>{posts+=`<rect x="${(q.x-.22).toFixed(3)}" y="${(q.y-.22).toFixed(3)}" width=".44" height=".44" fill="${C.setStroke}"/>`;});g+=posts;}
+    L1.set+=`<g ${op}>${selG}${g}${hit}</g>`;return;}
+  if(it.kind==='hedge'){g=`<path d="${d}" fill="none" stroke="#6fae7a" stroke-width="${W}" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#4f8a5b" stroke-width="${Math.max(W-3*px,px)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    L1.set+=`<g ${op}>${selG}${g}${hit}</g>`;return;}}
+{const _dl=drawLine;drawLine=function(it,L1,o,sel){if(STREET_KINDS.has(it.kind))return drawStreet(it,L1,o,sel);return _dl(it,L1,o,sel);};}
+/* fields */
+function streetFields(it){const k=it.kind;let h='';
+  if(k==='road'||k==='sidewalk'||k==='hedge'||k==='curb')h+=fld(k==='road'?'Width, curb to curb (ft)':'Width (ft)',inp('w',stW(it),'number','min=".25" step=".5"'));
+  if(k==='road')h+=`<div class="f2">${fld('Lanes',sel('lanes',['1','2','3','4','5','6'],String(it.lanes||2)))}${fld('Center line',sel('center',['Double yellow','Single yellow','Dashed white','One-way'],it.center||'Double yellow'))}</div>`;
+  if(k==='sidewalk')h+=fld('Curb',sel('curb',['Right side','Left side','Both sides','None'],it.curb||'Right side'));
+  h+=fld('Label',inp('label',it.label||''));
+  h+=`<div class="pSub">${fmtFt(lineLen(it.pts))} long. Drag an orange point to reshape it, or the round handle in the middle of a stretch to curve it. <b>Continue</b> in the bar above adds more stretches to the end.${k==='sidewalk'?' “Right side” means the right-hand side as you walk from the first point to the last.':''}</div>`;
+  return h;}
+{const _rq=renderQuick;renderQuick=function(){_rq();const q=$('#quick');if(!q||!q.innerHTML||fromQuick)return;if(selIds().length!==1)return;const it=selItem();
+  if(!it||it.t!=='line'||!STREET_KINDS.has(it.kind)||it.kind==='fence'||q.querySelector('[data-k="w"]'))return;
+  const b=q.querySelector('b');if(b)b.insertAdjacentHTML('afterend',`<label class="qf">W<input class="in" data-k="w" type="number" min=".25" step=".5" value="${stW(it)}"></label>`);};}
 /* ============================================================
    Blocking belongs to the shot
    Characters, their marks and their moves live on each shot, like the
