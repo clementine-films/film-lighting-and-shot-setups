@@ -3143,6 +3143,15 @@ window.addEventListener('keydown',e=>{const tag=(e.target&&e.target.tagName)||''
 /* changing a scene's number carries its shots along: 1A, 1B become 5A, 5B */
 {const _af=applyField;applyField=function(el,live){const isNum=el&&el.dataset&&el.dataset.o==='scene'&&el.dataset.k==='num';const sc=isNum?scene():null;if(sc&&sc._numWas==null)sc._numWas=String(sc.num);const old=sc?sc._numWas:null;const r=_af(el,live);
   try{if(isNum&&!live){delete sc._numWas;const nw=String(sc.num).trim();if(nw&&nw!==old){const esc2=old.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const re=new RegExp('^'+esc2+'(?=[A-Za-z])');let n=0;sc.setups.forEach(su=>su.shots.forEach(s=>{if(re.test(s.num)){s.num=s.num.replace(re,nw);n++;}}));if(n){renderTree();renderPanel();scheduleSave();toast(`Scene ${nw}: its shots were renumbered to match`);}}}}catch(e){}return r;};}
+/* early drafts: renumber every scene 1, 2, 3… in list order, shots follow */
+function renumberScenes(){const plan=P.scenes.map((sc,i)=>({sc,old:String(sc.num),nw:String(i+1)}));const changes=plan.filter(x=>x.old!==x.nw);
+  if(!changes.length){toast('Scenes are already numbered 1, 2, 3… in list order');return;}
+  openModal(`<h3>Renumber scenes in list order</h3><div class="pSub" style="margin-bottom:10px">For early drafts. Every scene is numbered 1, 2, 3… from the top of the Breakdown down, and shots follow their scene (1A, 1B…). Shots you named some other way keep their names. Undo with ⌘/Ctrl+Z.</div>
+   <div style="max-height:260px;overflow:auto;border:1px solid var(--line2);border-radius:8px;padding:6px 10px;margin-bottom:12px">${changes.map(x=>`<div class="kv"><span>${esc(x.old)} &nbsp;${esc(sceneHeading(x.sc))}</span><b>→ ${esc(x.nw)}</b></div>`).join('')}</div>
+   <div class="mFoot" style="display:flex;gap:6px;justify-content:flex-end"><button class="btn" data-close>Cancel</button><button class="btn pri" id="renumGo">Renumber ${changes.length} scene${changes.length===1?'':'s'}</button></div>`);
+  $('#renumGo').onclick=()=>{snap();const tmp=plan.map(x=>{const re=new RegExp('^'+x.old.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?=[A-Za-z])');const shots=[];x.sc.setups.forEach(su=>su.shots.forEach(s=>{if(re.test(s.num))shots.push([s,s.num.replace(re,'')]);}));return {x,shots};});
+    tmp.forEach(({x,shots})=>{x.sc.num=x.nw;shots.forEach(([s,suf])=>s.num=x.nw+suf);});closeModal();changed();renderTree();if(UI.R)renderPanel();toast(`${changes.length} scene${changes.length===1?'':'s'} renumbered`);};}
+{const h=$('#addScene');if(h){h.insertAdjacentHTML('beforebegin','<button class="addMini" id="renumScenes" title="Renumber every scene 1, 2, 3… in list order (for early drafts)">1·2·3</button> ');$('#renumScenes').onclick=renumberScenes;}}
 const BRANDFF=(()=>{let o='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.type===5&&/EB Garamond|Lato/.test(r.cssText))o+=r.cssText;}catch(e){}}return o;})();
 /* ============================================================
    Export
