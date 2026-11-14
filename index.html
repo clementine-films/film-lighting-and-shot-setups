@@ -3140,6 +3140,9 @@ window.addEventListener('keydown',e=>{const tag=(e.target&&e.target.tagName)||''
       V.sceneId=dest.id;V.setupId=to.id;V.shotId=f.sh.id;}
     V.sel=null;V.multi=[];fixView();changed();if(typeof renderTree==='function')renderTree();toast(msg,3500);},true);
   {const _rt=renderTree;renderTree=function(){_rt();tree.querySelectorAll('.sRow[data-scene],.suRow[data-setup],.shotChip[data-shot]').forEach(n=>n.setAttribute('draggable','true'));};}}
+/* changing a scene's number carries its shots along: 1A, 1B become 5A, 5B */
+{const _af=applyField;applyField=function(el,live){const isNum=el&&el.dataset&&el.dataset.o==='scene'&&el.dataset.k==='num';const sc=isNum?scene():null;if(sc&&sc._numWas==null)sc._numWas=String(sc.num);const old=sc?sc._numWas:null;const r=_af(el,live);
+  try{if(isNum&&!live){delete sc._numWas;const nw=String(sc.num).trim();if(nw&&nw!==old){const esc2=old.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const re=new RegExp('^'+esc2+'(?=[A-Za-z])');let n=0;sc.setups.forEach(su=>su.shots.forEach(s=>{if(re.test(s.num)){s.num=s.num.replace(re,nw);n++;}}));if(n){renderTree();renderPanel();scheduleSave();toast(`Scene ${nw}: its shots were renumbered to match`);}}}}catch(e){}return r;};}
 const BRANDFF=(()=>{let o='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.type===5&&/EB Garamond|Lato/.test(r.cssText))o+=r.cssText;}catch(e){}}return o;})();
 /* ============================================================
    Export
