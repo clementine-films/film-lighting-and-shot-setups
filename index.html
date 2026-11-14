@@ -306,7 +306,7 @@ body.narrow #left{left:0} body.narrow #right{right:0}
 .zGrp{display:inline-flex;align-items:center;gap:3px}
 .zGrp .zb{min-width:26px;padding:2px 6px;font-size:13px;line-height:1}
 #viewBar{z-index:7}
-.measBox{position:absolute;z-index:8;display:flex;align-items:center;gap:6px;background:rgba(23,25,28,.97);border:1px solid #c64fd3;border-radius:8px;padding:5px 6px 5px 10px;box-shadow:0 8px 22px rgba(0,0,0,.45)}
+.measBox{position:absolute;z-index:8;display:flex;align-items:center;gap:6px;background:rgba(23,25,28,.97);border:1px solid #5a2380;border-radius:8px;padding:5px 6px 5px 10px;box-shadow:0 8px 22px rgba(0,0,0,.45)}
 .measBox b{font-family:var(--mono,monospace);color:var(--text);margin-right:4px}
 :root[data-theme="light"] .measBox{background:rgba(247,248,250,.98)}
 </style>
@@ -3060,14 +3060,14 @@ function ladderGlyph(C,px){const col=C.grip||'#c9b28a';let r='';for(let i=-1;i<=
    Measure tool (L): drag between two points to read the distance; keep it on the plot if it matters.
    A kept measurement is a 'dim' line: its ends can be dragged, it exports, Delete removes it.
    ============================================================ */
-LINES.dim={name:'Measurement',cat:'Set',group:'Architecture',color:'#c64fd3',hideLib:true};
-const DIMC='#c64fd3';
+LINES.dim={name:'Measurement',cat:'Set',group:'Architecture',color:'#5a2380',hideLib:true};
+const DIMC='#5a2380';
 TOOLS.push(['measure','Measure','L']);
 {const _ti=toolIcon;toolIcon=function(k){if(k!=='measure')return _ti(k);const c='currentColor';return `<svg viewBox="0 0 14 14" width="18" height="18"><rect x="1" y="4.5" width="12" height="5" rx=".8" fill="none" stroke="${c}" stroke-width="1.2" transform="rotate(-30 7 7)"/><path d="M4.2 5.6l.9 1.5M6.3 4.4l.9 1.5M8.4 3.2l.9 1.5" stroke="${c}" stroke-width="1" transform="rotate(0)"/></svg>`;};}
-function dimSVG(a,b,o,live){const px=o.px,C=o.C;const L=Math.hypot(b.x-a.x,b.y-a.y);if(L<.05)return '';const ux=(b.x-a.x)/L,uy=(b.y-a.y)/L,nx=-uy,ny=ux;const t=.35;
+function dimSVG(a,b,o,live){const px=o.px,C=o.C;const L=Math.hypot(b.x-a.x,b.y-a.y);if(L<.05)return '';const ux=(b.x-a.x)/L,uy=(b.y-a.y)/L,nx=-uy,ny=ux;const t=.25;
   const tick=q=>`<path d="M${q.x+nx*t} ${q.y+ny*t} L${q.x-nx*t} ${q.y-ny*t}" stroke="${DIMC}" stroke-width="${2*px}"/>`;
-  const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;let ang=Math.atan2(uy,ux)*180/Math.PI;if(ang>90)ang-=180;if(ang<-90)ang+=180;const txt=fmtFt(L);const fs=Math.max(.42,11*px);const w=txt.length*fs*.58+fs*.8;
-  return `<path d="M${a.x} ${a.y} L${b.x} ${b.y}" stroke="${DIMC}" stroke-width="${1.6*px}" ${live?`stroke-dasharray="${5*px} ${3*px}"`:''}/>${tick(a)}${tick(b)}<g transform="translate(${mx} ${my}) rotate(${ang})"><rect x="${-w/2}" y="${-fs*1.55}" width="${w}" height="${fs*1.25}" rx="${fs*.3}" fill="${C.bg}" stroke="${DIMC}" stroke-width="${px}"/><text y="${-fs*.62}" text-anchor="middle" font-family="${C.mono}" font-weight="700" font-size="${fs}" fill="${C.text}">${txt}</text></g>`;}
+  const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;let ang=Math.atan2(uy,ux)*180/Math.PI;if(ang>90)ang-=180;if(ang<-90)ang+=180;const txt=fmtFt(L);const fs=Math.max(.28,8*px);const w=txt.length*fs*.58+fs*.8;
+  return `<path d="M${a.x} ${a.y} L${b.x} ${b.y}" stroke="${DIMC}" stroke-width="${1.3*px}" ${live?`stroke-dasharray="${5*px} ${3*px}"`:''}/>${tick(a)}${tick(b)}<g transform="translate(${mx} ${my}) rotate(${ang})"><text y="${-fs*.45}" text-anchor="middle" font-family="${C.mono}" font-weight="700" font-size="${fs}" fill="${DIMC}" paint-order="stroke" stroke="#f3ecf8" stroke-width="${2.5*px}" stroke-linejoin="round">${txt}</text></g>`;}
 /* kept measurements draw as dimension lines */
 {const _dl=drawLine;drawLine=function(it,L1,o,sel){if(it.kind!=='dim')return _dl(it,L1,o,sel);if(o.ghost||!it.pts||it.pts.length<2)return;const a=it.pts[0],b=it.pts[it.pts.length-1];
   const hit=`<path d="M${a.x} ${a.y} L${b.x} ${b.y}" stroke="transparent" stroke-width="${14*o.px}" fill="none"/>`;
