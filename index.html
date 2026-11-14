@@ -306,6 +306,9 @@ body.narrow #left{left:0} body.narrow #right{right:0}
 .zGrp{display:inline-flex;align-items:center;gap:3px}
 .zGrp .zb{min-width:26px;padding:2px 6px;font-size:13px;line-height:1}
 #viewBar{z-index:7}
+.measBox{position:absolute;z-index:8;display:flex;align-items:center;gap:6px;background:rgba(23,25,28,.97);border:1px solid #c64fd3;border-radius:8px;padding:5px 6px 5px 10px;box-shadow:0 8px 22px rgba(0,0,0,.45)}
+.measBox b{font-family:var(--mono,monospace);color:var(--text);margin-right:4px}
+:root[data-theme="light"] .measBox{background:rgba(247,248,250,.98)}
 </style>
 </head>
 <body>
@@ -1302,7 +1305,7 @@ function libEntries(){const arr=[];
   Object.entries(PRESETS).forEach(([k,p])=>arr.push({key:k,cat:p.cat,group:p.group||('Picksheet — '+(p.cat==='Grip'?'Grip':p.cat==='Power'?'Electric':'Camera')),name:p.name,kit:!p.group}));
   arr.push({key:'cable',cat:'Power',group:'Picksheet — Electric',name:'14/3 Stinger run (draw it)',line:true,kit:true});
   arr.push({key:'track',cat:'Camera',group:'Picksheet — Camera',name:'Procam dolly track (draw it, 12 ft max)',line:true,kit:true});
-  Object.values(LIB).filter(L=>!L.kit&&!L.hideLib&&!['beefy','pigeon','quadbox'].includes(L.key)).forEach(L=>arr.push({key:L.key,cat:L.cat,group:L.group,name:L.name,w:L.kind==='light'?L.defaults.watts:null}));Object.entries(LINES).forEach(([k,L])=>arr.push({key:k,cat:L.cat,group:L.group,name:L.name,line:true}));return arr;}
+  Object.values(LIB).filter(L=>!L.kit&&!L.hideLib&&!['beefy','pigeon','quadbox'].includes(L.key)).forEach(L=>arr.push({key:L.key,cat:L.cat,group:L.group,name:L.name,w:L.kind==='light'?L.defaults.watts:null}));Object.entries(LINES).filter(([k,L])=>!L.hideLib).forEach(([k,L])=>arr.push({key:k,cat:L.cat,group:L.group,name:L.name,line:true}));return arr;}
 const LIBALL=libEntries();
 function renderLib(){
   $('#libCats').innerHTML=['Picksheet','All',...CATS].map(c=>`<button class="cat ${V.libCat===c?'on':''}" data-cat="${c}" ${c==='Picksheet'?'title="Only what\'s on your NYU Spring Narrative picksheet"':''}>${c==='Picksheet'?'★ Picksheet':c}</button>`).join('');
@@ -2281,7 +2284,7 @@ document.addEventListener('keydown',e=>{if(!(e.metaKey||e.ctrlKey)||e.altKey)ret
 function continueLine(it){if(!it||it.t!=='line'||it.kind==='wall')return;V.placing=null;setTool(it.kind);V.draft={t:'line',kind:it.kind,pts:it.pts.map(p=>({...p})),color:it.color,label:it.label,owner:it.owner||'',_from:it.id};V.sel=null;V.multi=[];V.typed='';renderQuick();updHint();renderCanvas();toast('Click each new stop. Enter or double-click to finish.');}
 {const _fd2=finishDraft;finishDraft=function(){const d=V.draft;const from=d&&d._from?findItem(d._from):null;_fd2();if(!from||!d||d.pts.length<2)return;const it=selItem();if(!it||it.t!=='line'||it.id===from.it.id)return;Object.keys(from.it).forEach(k=>{if(k!=='id'&&k!=='pts')it[k]=from.it[k];});const f=findItem(from.it.id);if(f)f.arr.splice(f.arr.indexOf(f.it),1);changed();};}
 {const _rq2=renderQuick;renderQuick=function(){_rq2();const q=$('#quick');if(!q||!q.innerHTML||fromQuick)return;const ids=selIds();const sep=q.querySelector('.qsep');if(!sep)return;
-    if(ids.length===1){const it=selItem();if(it&&it.t==='line'&&it.kind!=='wall')sep.insertAdjacentHTML('beforebegin',`<button class="btn sm" data-xact="cont" title="Add more stops to the end of this ${it.kind==='actor'||it.kind==='cammove'?'move':'line'}">Continue</button>`);
+    if(ids.length===1){const it=selItem();if(it&&it.t==='line'&&it.kind!=='wall'&&it.kind!=='dim')sep.insertAdjacentHTML('beforebegin',`<button class="btn sm" data-xact="cont" title="Add more stops to the end of this ${it.kind==='actor'||it.kind==='cammove'?'move':'line'}">Continue</button>`);
       if(it&&it.t==='callout')sep.insertAdjacentHTML('beforebegin',`<label class="qf">Note<input class="in" data-k="text" value="${esc(it.text)}" style="width:190px"></label><label class="qf">Pointer<input class="in" data-k="lead" type="number" min="0" step=".5" value="${esc(it.lead)}" style="width:58px"></label>`);}
     sep.insertAdjacentHTML('afterend',`<button class="btn sm" data-xact="copy" title="Copy (⌘/Ctrl C)">Copy</button>`);};}
 $('#quick').addEventListener('click',e=>{const b=e.target.closest('[data-xact]');if(!b)return;const a=b.dataset.xact;if(a==='copy')copySel();else if(a==='cont')continueLine(selItem());});
@@ -3053,6 +3056,43 @@ document.addEventListener('change',e=>{const t=e.target;if(!t.matches||!t.matche
 function ladderGlyph(C,px){const col=C.grip||'#c9b28a';let r='';for(let i=-1;i<=1;i+=.5)r+=`<line x1="${i}" y1="-.85" x2="${i}" y2=".85" stroke="${col}" stroke-width="${1.2*px}"/>`;
   return `<rect x="-1.75" y="-1" width="3.5" height="2" rx=".08" fill="${col}" fill-opacity=".08" stroke="${col}" stroke-width="${1.6*px}"/><line x1="-1.75" y1="-.85" x2="1.75" y2="-.85" stroke="${col}" stroke-width="${1.6*px}"/><line x1="-1.75" y1=".85" x2="1.75" y2=".85" stroke="${col}" stroke-width="${1.6*px}"/>${r}<rect x="-.45" y="-.45" width=".9" height=".9" fill="none" stroke="${col}" stroke-width="${1.2*px}" stroke-dasharray="${3*px} ${2*px}"/>`;}
 {const _af=applyField;applyField=function(el,live){const r=_af(el,live);try{if(el&&el.dataset&&el.dataset.k==='support'&&el.value==='Ladder + hi-hat'){const it=selItem();if(it&&it.t==='camera'&&(+it.height||0)<6.5){it.height=7;renderCanvas();if(UI.R)renderPanel();}}}catch(e){}return r;};}
+/* ============================================================
+   Measure tool (L): drag between two points to read the distance; keep it on the plot if it matters.
+   A kept measurement is a 'dim' line: its ends can be dragged, it exports, Delete removes it.
+   ============================================================ */
+LINES.dim={name:'Measurement',cat:'Set',group:'Architecture',color:'#c64fd3',hideLib:true};
+const DIMC='#c64fd3';
+TOOLS.push(['measure','Measure','L']);
+{const _ti=toolIcon;toolIcon=function(k){if(k!=='measure')return _ti(k);const c='currentColor';return `<svg viewBox="0 0 14 14" width="18" height="18"><rect x="1" y="4.5" width="12" height="5" rx=".8" fill="none" stroke="${c}" stroke-width="1.2" transform="rotate(-30 7 7)"/><path d="M4.2 5.6l.9 1.5M6.3 4.4l.9 1.5M8.4 3.2l.9 1.5" stroke="${c}" stroke-width="1" transform="rotate(0)"/></svg>`;};}
+function dimSVG(a,b,o,live){const px=o.px,C=o.C;const L=Math.hypot(b.x-a.x,b.y-a.y);if(L<.05)return '';const ux=(b.x-a.x)/L,uy=(b.y-a.y)/L,nx=-uy,ny=ux;const t=.35;
+  const tick=q=>`<path d="M${q.x+nx*t} ${q.y+ny*t} L${q.x-nx*t} ${q.y-ny*t}" stroke="${DIMC}" stroke-width="${2*px}"/>`;
+  const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;let ang=Math.atan2(uy,ux)*180/Math.PI;if(ang>90)ang-=180;if(ang<-90)ang+=180;const txt=fmtFt(L);const fs=Math.max(.42,11*px);const w=txt.length*fs*.58+fs*.8;
+  return `<path d="M${a.x} ${a.y} L${b.x} ${b.y}" stroke="${DIMC}" stroke-width="${1.6*px}" ${live?`stroke-dasharray="${5*px} ${3*px}"`:''}/>${tick(a)}${tick(b)}<g transform="translate(${mx} ${my}) rotate(${ang})"><rect x="${-w/2}" y="${-fs*1.55}" width="${w}" height="${fs*1.25}" rx="${fs*.3}" fill="${C.bg}" stroke="${DIMC}" stroke-width="${px}"/><text y="${-fs*.62}" text-anchor="middle" font-family="${C.mono}" font-weight="700" font-size="${fs}" fill="${C.text}">${txt}</text></g>`;}
+/* kept measurements draw as dimension lines */
+{const _dl=drawLine;drawLine=function(it,L1,o,sel){if(it.kind!=='dim')return _dl(it,L1,o,sel);if(o.ghost||!it.pts||it.pts.length<2)return;const a=it.pts[0],b=it.pts[it.pts.length-1];
+  const hit=`<path d="M${a.x} ${a.y} L${b.x} ${b.y}" stroke="transparent" stroke-width="${14*o.px}" fill="none"/>`;
+  const sg=sel?`<path d="M${a.x} ${a.y} L${b.x} ${b.y}" stroke="#f2a93b" stroke-width="${6*o.px}" stroke-opacity=".45" fill="none"/>`:'';
+  L1.lines+=`<g data-id="${it.id}" style="cursor:pointer">${sg}${dimSVG(a,b,o,false)}${hit}</g>`;};}
+/* live measurement while the tool is in use */
+{const _ri=renderItems;renderItems=function(items,o){const L=_ri(items,o);if(o&&o.dimSel&&!o.ghost&&V.meas&&V.meas.b){try{L.labels=(L.labels||'')+`<g pointer-events="none">${dimSVG(V.meas.a,V.meas.b,o,!V.meas.done)}</g>`;}catch(e){}}return L;};}
+{const _st=setTool;setTool=function(k){if(k!=='measure'){V.meas=null;measBox(false);}_st(k);if(k==='measure')cv.setAttribute('class','draw');};}
+{const _uh=updHint;updHint=function(){_uh();if(V.tool!=='measure')return;const h=$('#hint');if(h)h.innerHTML=`<b style="color:#ffcf7a">Measure</b> — drag from one point to another · Shift keeps it straight · Option/Alt turns snapping off · Esc to stop`;};}
+function measBox(show){let el=$('#measBox');if(!show){if(el)el.remove();return;}const m=V.meas;if(!m||!m.b)return;
+  if(!el){el=document.createElement('div');el.id='measBox';el.className='measBox';$('#main')?$('#main').appendChild(el):cv.parentNode.appendChild(el);}
+  const r=cv.getBoundingClientRect(),pr=el.parentNode.getBoundingClientRect();const sx=(m.b.x-V.vx)*V.zoom+r.left-pr.left,sy=(m.b.y-V.vy)*V.zoom+r.top-pr.top;
+  el.style.left=Math.max(6,Math.min(pr.width-250,sx+12))+'px';el.style.top=Math.max(6,Math.min(pr.height-60,sy+12))+'px';
+  el.innerHTML=`<b>${fmtFt(Math.hypot(m.b.x-m.a.x,m.b.y-m.a.y))}</b><button class="btn sm pri" data-meas="keep">Keep on plot</button><button class="btn sm" data-meas="drop" title="Clear this measurement">✕</button>`;}
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-meas]');if(!t)return;const m=V.meas;
+  if(t.dataset.meas==='keep'&&m&&m.b){snap();const it={id:rid(),t:'line',kind:'dim',pts:[{x:r2(m.a.x),y:r2(m.a.y)},{x:r2(m.b.x),y:r2(m.b.y)}],scope:'setup'};setup().items.push(it);V.meas=null;measBox(false);changed();toast('Measurement kept. Select it to move its ends, or press Delete to remove it.');return;}
+  V.meas=null;measBox(false);renderCanvas();});
+const measPt=(e,from)=>{const w=toWorld(e);const q=snapPt(w,{kinds:['wall','set','light','camera','talent','grip','mark','track','cable','dim'],segKinds:['wall'],alt:e.altKey,lock:e.shiftKey&&!!from,from});V.guides=[];return {x:q.x,y:q.y};};
+cv.addEventListener('pointerdown',e=>{if(V.tool!=='measure'||e.button||spaceDown)return;e.stopImmediatePropagation();e.preventDefault();const a=measPt(e);V.meas={a,b:a,done:false,drag:true};measBox(false);try{cv.setPointerCapture(e.pointerId);}catch(x){}renderCanvas();},true);
+cv.addEventListener('pointermove',e=>{const m=V.meas;if(V.tool!=='measure'||!m||!m.drag)return;e.stopImmediatePropagation();m.b=measPt(e,m.a);renderCanvas();},true);
+cv.addEventListener('pointerup',e=>{const m=V.meas;if(V.tool!=='measure'||!m||!m.drag)return;e.stopImmediatePropagation();m.drag=false;V.snapMark=null;if(Math.hypot(m.b.x-m.a.x,m.b.y-m.a.y)<.1){V.meas=null;renderCanvas();return;}m.done=true;renderCanvas();measBox(true);},true);
+window.addEventListener('keydown',e=>{const tag=(e.target&&e.target.tagName)||'';if(/INPUT|TEXTAREA|SELECT/.test(tag)||e.target.isContentEditable)return;
+  if(V.tool==='measure'&&e.key==='Escape'){if(V.meas){V.meas=null;measBox(false);renderCanvas();e.stopImmediatePropagation();}return;}
+  if(!e.metaKey&&!e.ctrlKey&&!e.altKey&&e.key.toLowerCase()==='l'&&!$('#modal.open')){e.stopImmediatePropagation();e.preventDefault();V.placing=null;setTool(V.tool==='measure'?'select':'measure');}},true);
+{const _rc=renderCanvas;renderCanvas=function(){_rc();if(V.meas&&V.meas.done&&$('#measBox'))measBox(true);};}
 const BRANDFF=(()=>{let o='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.type===5&&/EB Garamond|Lato/.test(r.cssText))o+=r.cssText;}catch(e){}}return o;})();
 /* ============================================================
    Export
