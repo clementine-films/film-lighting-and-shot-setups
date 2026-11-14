@@ -251,7 +251,10 @@ body.narrow #left{left:0} body.narrow #right{right:0}
 #layerPop{position:absolute;left:10px;bottom:52px;background:rgba(23,25,28,.98);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;z-index:7;display:none;box-shadow:0 14px 34px rgba(0,0,0,.5)}
 #layerPop.open{display:block}
 @media (max-width:640px){#layerPop{bottom:96px}}
-#calc.dof{max-height:min(78%,720px)}
+#calc.dof{max-height:none}
+#calc{left:auto;right:10px;top:10px;bottom:52px;width:min(410px,46%);max-height:none}
+#calc.min{top:auto;overflow:hidden}#calc.min>:not(.cHead){display:none}#calc.min .cNote{display:none}#calc .cGrid{grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr))}#calc *{max-width:100%}#calc .kv{flex-wrap:wrap}#calc.min .cHead{margin-bottom:0}#calc .cNote{min-width:0;flex-basis:100%;order:3}
+@media (max-width:640px){#calc{top:auto;left:6px;right:6px;width:auto;bottom:96px;max-height:60%}#calc.dof{max-height:60%}}
 .xOpts .seg{flex-wrap:wrap}
 .pickList{max-height:200px;overflow:auto;border:1px solid var(--line,#333);border-radius:6px;padding:6px 8px;margin-top:6px}
 .pickList .pkSc{margin-top:4px}.pickList .pkSu{font-size:11px;color:var(--sub);margin:4px 0 2px 22px}
@@ -302,6 +305,7 @@ body.narrow #left{left:0} body.narrow #right{right:0}
 @media (max-width:640px){#exBar{left:60px;right:8px;transform:none;max-width:none}#exBar span{display:none}}
 .zGrp{display:inline-flex;align-items:center;gap:3px}
 .zGrp .zb{min-width:26px;padding:2px 6px;font-size:13px;line-height:1}
+#viewBar{z-index:7}
 </style>
 </head>
 <body>
@@ -405,7 +409,7 @@ const MODS=['None','Barn doors','Snoot','Egg crate / grid','Black wrap','Softbox
 const ROLES=['Key','Fill','Back / Rim','Kicker','Hair','Eye light','Background','Practical','Ambient / Base','Motivated (window)','Motivated (practical)','Effect','Bounce source'];
 const MOUNTS=['C-stand','Light stand (Arri kit)','Beefy baby stand','Pigeon (floor)','Magnet / tape-up','Combo stand','Baby stand','Rolling stand','Menace / boom arm','Overhead / pipe','Floor (turtle)','Clamp / rig','Handheld','Practical (set)','—'];
 const SENSORS={'Sony FS7 II — 4K DCI 17:9 (22.5mm)':22.5,'Sony FS7 II — UHD/HD 16:9 (21.2mm)':21.18,'Super 35 (24.9mm)':24.89,'Full Frame (36mm)':36,'Large Format (36.7mm)':36.7,'APS-C (23.5mm)':23.5,'Micro 4/3 (17.3mm)':17.3,'1-inch (13.2mm)':13.2,'16mm (12.5mm)':12.52};
-const SUPPORTS=['Baby legs (100mm)','Sticks (tripod)','Dolly','Slider','Steadicam','Gimbal','Handheld','Shoulder','Jib / crane','Hi-hat','Car mount'];
+const SUPPORTS=['Baby legs (100mm)','Sticks (tripod)','Dolly','Slider','Steadicam','Gimbal','Handheld','Shoulder','Jib / crane','Hi-hat','Ladder + hi-hat','Car mount'];
 const LENSES=[
   {id:'zf21',name:'Zeiss ZF 21mm',short:'ZF 21',f:21,mount:'F'},
   {id:'zf35',name:'Zeiss ZF 35mm',short:'ZF 35',f:35,mount:'F'},
@@ -612,7 +616,7 @@ function kitUsage(items){
         if(it.standed){add('cstand');add('sandbag');}return;}
       if(it.t==='bounce'){if(/Flexfill/.test(it.size+it.fabric))add('flexfill');else no(it.size+' '+it.fabric+' (expendable / not in kit)');if(it.standed){add('cstand');add('sandbag');}return;}
       no(L.name);return;}
-    if(L.kind==='camera'){const sp=it.support;if(sp==='Baby legs (100mm)')add('babyLegs');else if(sp==='Hi-hat')add('hihat');else if(sp==='Dolly'){}else if(sp==='Sticks (tripod)')no('Standard-height sticks (kit has baby legs + hi-hat only)');else if(!['Handheld','Shoulder'].includes(sp))no(sp);return;}
+    if(L.kind==='camera'){const sp=it.support;if(sp==='Baby legs (100mm)')add('babyLegs');else if(sp==='Hi-hat')add('hihat');else if(sp==='Ladder + hi-hat'){add('hihat');no('Ladder (6′ A-frame stepladder)');}else if(sp==='Dolly'){}else if(sp==='Sticks (tripod)')no('Standard-height sticks (kit has baby legs + hi-hat only)');else if(!['Handheld','Shoulder'].includes(sp))no(sp);return;}
     if(L.kind==='camgear'){if(it.t==='village')add('monitor');else if(it.t==='dolly')add('dolly');else if(it.t==='boom'){}else no(L.name);return;}
     if(L.kind==='power'){if(it.t==='quadbox')add('quad');else if(it.t==='outlet'){}else no(L.name);return;}
   });
@@ -739,7 +743,7 @@ function renderItems(items,o){
     const sel=o.selSet?o.selSet.has(it.id):o.sel===it.id;
     if(it.t==='line'){drawLine(it,L1,o,sel);return;}
     const L=LIB[it.t];if(!L)return;
-    const tr=`translate(${it.x} ${it.y}) rotate(${it.r||0})`;
+    const tr=`translate(${it.x} ${it.y}) rotate(${it.r||0})`;const SZ=szOf(it);const trS=SZ===1?tr:tr+` scale(${SZ})`;
     const ida=o.ghost?'':`data-id="${it.id}"`;
     const selStroke=sel?`<circle r="${Math.max(1.1,(L.s||1)*.9)}" fill="none" stroke="#f2a93b" stroke-width="${1.5*px}" stroke-dasharray="${4*px} ${3*px}"/>`:'';
     let g='';
@@ -757,9 +761,9 @@ function renderItems(items,o){
         const fx=fxOff?{attr:'',defs:'',extra:''}:beamFx(it,gid,items,o,Lb,b,col,ga);L1.beams+=`<g transform="${tr}" pointer-events="none" ${fx.attr}><defs>${fx.defs}<radialGradient id="${gid}" gradientUnits="userSpaceOnUse" cx="${gcx}" cy="0" r="${Lg}"><stop offset="0" stop-color="${col}" stop-opacity="${ga}"/><stop offset=".55" stop-color="${col}" stop-opacity="${ga*.45}"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></radialGradient></defs>${shape}</g>`;L1.beams+=fx.extra;
       }
       g=lightGlyph(it,L,C,px,col,on);if(typeof isOverhead==='function'&&isOverhead(it))g+=`<circle r="${s*.9+.35}" fill="none" stroke="${col}" stroke-width="${1.3*px}" stroke-dasharray="${3*px} ${2.5*px}"/>`;
-      L1.lights+=`<g ${ida} transform="${tr}" ${o.ghost?'opacity=".35"':''}>${g}${selStroke}</g>`;
+      L1.lights+=`<g ${ida} transform="${trS}" ${o.ghost?'opacity=".35"':''}>${g}${selStroke}</g>`;
       // badge + label (unrotated)
-      if(!o.ghost){const n=o.nums[it.id];const off=(s*.9+.55);const ang=((it.r||0)+180)*D2R;const bx=it.x+Math.cos(ang)*off,by=it.y+Math.sin(ang)*off;const br=8*px;
+      if(!o.ghost){const n=o.nums[it.id];const off=(s*.9*SZ+.55);const ang=((it.r||0)+180)*D2R;const bx=it.x+Math.cos(ang)*off,by=it.y+Math.sin(ang)*off;const br=8*px;
         L1.labels+=`<g pointer-events="none">${typeof isOverhead==='function'&&isOverhead(it)?`<text x="${bx}" y="${by-br-2*px}" text-anchor="middle" font-family="${C.font}" font-weight="700" font-size="${fs*.85}" fill="${C.text}" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}">↑${esc(fmtFt(+it.height||0))}</text>`:''}<circle cx="${bx}" cy="${by}" r="${br}" fill="${on?C.badge:C.sub}"/><text x="${bx}" y="${by}" dy=".35em" text-anchor="middle" font-family="${C.mono}" font-weight="600" font-size="${fs}" fill="${C.badgeText}">${n}</text>`;
         if(o.labels==='full'){const t1=(it.label?it.label+' · ':'')+L.name.replace(/ \(.*\)/,'');const t2=[it.role,it.watts?fmtW(+it.watts):''].filter(Boolean).join(' · ');
           L1.labels+=`<text data-lid="${it.id}" data-p="5" data-ax="${bx}" data-ay="${by}" data-ar="${br}" x="${bx+br+3*px}" y="${by-1*px}" font-family="${C.font}" font-size="${fs}" font-weight="600" fill="${C.text}" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}">${esc(t1)}</text><text data-lid="${it.id}" x="${bx+br+3*px}" y="${by+fs}" font-family="${C.font}" font-size="${fs*.9}" fill="${C.sub}" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}">${esc(t2)}</text>`;}
@@ -770,46 +774,46 @@ function renderItems(items,o){
       const fov=hfov(it),fl=+it.fovLen||12,a=fov/2*D2R;const x=fl*Math.cos(a),y=fl*Math.sin(a);const col='#5cb8ff';
       L1.beams+=`<g transform="${tr}" pointer-events="none" opacity="${o.ghost?.35:1}"><path d="M.45 0 L${x} ${-y} M.45 0 L${x} ${y}" stroke="${col}" stroke-width="${1.2*px}" stroke-dasharray="${6*px} ${4*px}" fill="none"/><path d="M.45 0 L${x} ${-y} A${fl} ${fl} 0 0 1 ${x} ${y} Z" fill="${col}" fill-opacity=".07"/></g>`;
       g=`<rect x="-1.1" y="-.45" width="1.1" height=".9" rx=".08" fill="${col}" stroke="${C.bg}" stroke-width="${px}"/><path d="M0 -.25 L.5 -.4 L.5 .4 L0 .25Z" fill="${col}"/><rect x="-.9" y="-.65" width=".55" height=".2" fill="${col}"/>`;
-      L1.cam+=`<g ${ida} transform="${tr}" ${o.ghost?'opacity=".35"':''}>${g}${selStroke}</g>`;
+      if(it.support==='Ladder + hi-hat')L1.grip+=`<g ${ida} transform="${tr}" ${o.ghost?'opacity=".35"':''}>${ladderGlyph(C,px)}</g>`;L1.cam+=`<g ${ida} transform="${trS}" ${o.ghost?'opacity=".35"':''}>${g}${selStroke}</g>`;
       const t=(it.shotTag?`${it.shotTag} · ${lensLabel(it)}`:`${it.cam||'A'} CAM · ${lensLabel(it)}`)+(o.ghost?` · ${o.ghostLabel||''}`:'');
-      L1.labels+=`<text ${o.ghost?'':`data-lid="${it.id}" data-p="4" data-ax="${it.x}" data-ay="${it.y}" data-ar="1.1"`} x="${it.x}" y="${it.y+1.1+fs}" text-anchor="middle" font-family="${C.mono}" font-weight="600" font-size="${fs}" fill="${col}" opacity="${o.ghost?.55:1}" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}" pointer-events="none">${esc(t)}</text>`;
+      L1.labels+=`<text ${o.ghost?'':`data-lid="${it.id}" data-p="4" data-ax="${it.x}" data-ay="${it.y}" data-ar="1.1"`} x="${it.x}" y="${it.y+1.1*SZ+fs}" text-anchor="middle" font-family="${C.mono}" font-weight="600" font-size="${fs}" fill="${col}" opacity="${o.ghost?.55:1}" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}" pointer-events="none">${esc(t)}</text>`;
       if(!o.ghost&&o.labels==='full')L1.labels+=`<text data-lid="${it.id}" x="${it.x}" y="${it.y+1.1+fs*2.1}" text-anchor="middle" font-family="${C.font}" font-size="${fs*.9}" fill="${C.sub}" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}" pointer-events="none">${esc(it.support)} · ${it.height}′ · ${Math.round(fov)}° HFOV</text>`;
       return;
     }
     if(L.kind==='talent'){
       const col=it.color||'#ff7a7a';
       g=`<circle r=".75" fill="${col}" stroke="${C.bg}" stroke-width="${1.5*px}"/><path d="M.6 -.35 L1.15 0 L.6 .35Z" fill="${col}"/>`;
-      L1.talent+=`<g ${ida} transform="${tr}" ${o.ghost?'opacity=".35"':''}>${g}${selStroke}</g>`;
-      L1.labels+=`<text ${o.ghost?'':`data-lid="${it.id}" data-p="3" data-ax="${it.x}" data-ay="${it.y}" data-ar=".9"`} x="${it.x}" y="${it.y-1-3*px}" text-anchor="middle" font-family="${C.font}" font-weight="700" font-size="${fs}" fill="${col}" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}" pointer-events="none" letter-spacing=".04em">${esc((it.label||'ACTOR').toUpperCase())}${it.actor&&o.labels==='full'?` <tspan font-weight="400" fill="${C.sub}">(${esc(it.actor)})</tspan>`:''}</text>`;
+      L1.talent+=`<g ${ida} transform="${trS}" ${o.ghost?'opacity=".35"':''}>${g}${selStroke}</g>`;
+      L1.labels+=`<text ${o.ghost?'':`data-lid="${it.id}" data-p="3" data-ax="${it.x}" data-ay="${it.y}" data-ar=".9"`} x="${it.x}" y="${it.y-1*SZ-3*px}" text-anchor="middle" font-family="${C.font}" font-weight="700" font-size="${fs}" fill="${col}" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}" pointer-events="none" letter-spacing=".04em">${esc((it.label||'ACTOR').toUpperCase())}${it.actor&&o.labels==='full'?` <tspan font-weight="400" fill="${C.sub}">(${esc(it.actor)})</tspan>`:''}</text>`;
       return;
     }
     if(L.kind==='mark'){
       const col=it.color||'#ffd166';
-      L1.floor+=`<g ${ida} transform="${tr}"><rect x="-.55" y="-.55" width="1.1" height="1.1" fill="transparent"/><path d="M-.45 -.35 H.45 M0 -.35 V.45" stroke="${col}" stroke-width=".14" stroke-linecap="round"/>${selStroke}</g>`;
+      L1.floor+=`<g ${ida} transform="${trS}"><rect x="-.55" y="-.55" width="1.1" height="1.1" fill="transparent"/><path d="M-.45 -.35 H.45 M0 -.35 V.45" stroke="${col}" stroke-width=".14" stroke-linecap="round"/>${selStroke}</g>`;
       if(it.label)L1.labels+=`<text x="${it.x+.6}" y="${it.y-.4}" font-family="${C.mono}" font-size="${fs}" font-weight="600" fill="${col}" pointer-events="none">${esc(it.label)}</text>`;
       return;
     }
     if(L.kind==='text'){if(L.shape==='callout'){L1.labels+=calloutSVG(it,ida,tr,C,px,sel);return;}
-      L1.labels+=`<g ${ida} transform="${tr}"><text text-anchor="middle" dy=".35em" font-family="${C.font}" font-weight="600" font-size="${+it.fsize||.8}" fill="${C.text}">${esc(it.text)}</text>${sel?`<rect x="${-(String(it.text).length*(+it.fsize||.8)*.3)}" y="${-(+it.fsize||.8)*.7}" width="${String(it.text).length*(+it.fsize||.8)*.6}" height="${(+it.fsize||.8)*1.4}" fill="none" stroke="#f2a93b" stroke-width="${1.5*px}" stroke-dasharray="${4*px} ${3*px}"/>`:''}</g>`;
+      L1.labels+=`<g ${ida} transform="${trS}"><text text-anchor="middle" dy=".35em" font-family="${C.font}" font-weight="600" font-size="${+it.fsize||.8}" fill="${C.text}">${esc(it.text)}</text>${sel?`<rect x="${-(String(it.text).length*(+it.fsize||.8)*.3)}" y="${-(+it.fsize||.8)*.7}" width="${String(it.text).length*(+it.fsize||.8)*.6}" height="${(+it.fsize||.8)*1.4}" fill="none" stroke="#f2a93b" stroke-width="${1.5*px}" stroke-dasharray="${4*px} ${3*px}"/>`:''}</g>`;
       return;
     }
     if(L.kind==='set'){
       g=setGlyph(it,L,C,px);
       const selR=sel?bentOn(it)?bentSel(it,px):`<rect x="${-it.w/2-.15}" y="${-it.h/2-.15}" width="${+it.w+.3}" height="${+it.h+.3}" fill="none" stroke="#f2a93b" stroke-width="${1.5*px}" stroke-dasharray="${4*px} ${3*px}"/>`:'';
-      if(L.ground)(L1.gz||(L1.gz=[])).push([L.gz||0,`<g ${ida} transform="${tr}">${g}${selR}</g>`]);else L1.set+=`<g ${ida} transform="${tr}">${g}${selR}</g>`;
+      if(L.ground)(L1.gz||(L1.gz=[])).push([L.gz||0,`<g ${ida} transform="${trS}">${g}${selR}</g>`]);else L1.set+=`<g ${ida} transform="${trS}">${g}${selR}</g>`;
       if(it.label)L1.labels+=`<text ${o.ghost?'':`data-lid="${it.id}" data-p="1" data-ax="${it.x}" data-ay="${it.y}" data-ar=".2"`} x="${it.x}" y="${it.y}" dy=".35em" text-anchor="middle" font-family="${C.font}" font-size="${fs*.95}" fill="${C.sub}" pointer-events="none" paint-order="stroke" stroke="${C.setFill}" stroke-width="${2*px}">${esc(it.label)}</text>`;
       return;
     }
     if(L.kind==='grip'){
       g=gripGlyph(it,L,C,px);
-      L1.grip+=`<g ${ida} transform="${tr}">${g}${selStroke}</g>`;
-      if(o.labels==='full'){const t=gripLabel(it);if(t)L1.labels+=`<text ${o.ghost?'':`data-lid="${it.id}" data-p="2" data-ax="${it.x}" data-ay="${it.y}" data-ar="${gripExtent(it)}"`} x="${it.x}" y="${it.y+gripExtent(it)+fs*1.1}" text-anchor="middle" font-family="${C.font}" font-size="${fs*.9}" fill="${C.grip}" pointer-events="none" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}">${esc(t)}</text>`;}
+      L1.grip+=`<g ${ida} transform="${trS}">${g}${selStroke}</g>`;
+      if(o.labels==='full'){const t=gripLabel(it);if(t)L1.labels+=`<text ${o.ghost?'':`data-lid="${it.id}" data-p="2" data-ax="${it.x}" data-ay="${it.y}" data-ar="${gripExtent(it)}"`} x="${it.x}" y="${it.y+gripExtent(it)*SZ+fs*1.1}" text-anchor="middle" font-family="${C.font}" font-size="${fs*.9}" fill="${C.grip}" pointer-events="none" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}">${esc(t)}</text>`;}
       return;
     }
     if(L.kind==='camgear'||L.kind==='power'){
       g=miscGlyph(it,L,C,px);
       const tgt=L.kind==='power'?'grip':'cam';
-      L1[tgt]+=`<g ${ida} transform="${tr}">${g}${selStroke}</g>`;
+      L1[tgt]+=`<g ${ida} transform="${trS}">${g}${selStroke}</g>`;
       let t='';if(it.t==='gen')t=`GEN ${fmtW(+it.capacity||0)} run`;else if(it.t==='outlet')t=`${it.circuit||'?'} · ${it.amps||20}A`;else if(it.t==='village')t='VILLAGE';else if(it.t==='boom')t='BOOM';
       if(it.label)t=it.label+(t?' · '+t:'');
       if(t)L1.labels+=`<text ${o.ghost?'':`data-lid="${it.id}" data-p="2" data-ax="${it.x}" data-ay="${it.y}" data-ar="1"`} x="${it.x}" y="${it.y+1.6+fs}" text-anchor="middle" font-family="${C.mono}" font-size="${fs*.9}" fill="${it.t==='gen'||it.t==='outlet'?'#f08c3c':C.sub}" pointer-events="none" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}">${esc(t)}</text>`;
@@ -1065,7 +1069,7 @@ function renderCanvas(){
     else{const L=LIB[it.t];const R=handleR(it);const a=(it.r||0)*D2R;const hx=it.x+Math.cos(a)*R,hy=it.y+Math.sin(a)*R;
       out+=`<line x1="${it.x}" y1="${it.y}" x2="${hx}" y2="${hy}" stroke="#f2a93b" stroke-width="${px}" stroke-dasharray="${3*px} ${3*px}" pointer-events="none"/><circle data-h="rot" cx="${hx}" cy="${hy}" r="${6*px}" fill="#f2a93b" stroke="#111" stroke-width="${px}" style="cursor:grab"><title>Drag to rotate (Shift = 15° steps)</title></circle>`;
       if(L&&L.kind==='set'&&L.shape!=='north'){const c=Math.cos(a),s=Math.sin(a);const lx=it.w/2,ly=it.h/2;const cx=it.x+lx*c-ly*s,cy=it.y+lx*s+ly*c;out+=`<rect data-h="size" x="${cx-5*px}" y="${cy-5*px}" width="${10*px}" height="${10*px}" fill="#fff" stroke="#111" stroke-width="${px}" style="cursor:nwse-resize"><title>Drag to resize</title></rect>`;
-        out+=sizeTag(it,C,px);}}
+        out+=sizeTag(it,C,px);}else if(scalable(it)){const rb=szBase(it)*szOf(it)*.75;out+=`<rect data-h="scale" x="${it.x+rb-5*px}" y="${it.y+rb-5*px}" width="${10*px}" height="${10*px}" fill="#fff" stroke="#111" stroke-width="${px}" style="cursor:nwse-resize"><title>Drag to make it bigger or smaller</title></rect>`;}}
   }
   // drafts & placement ghost
   if(V.draft&&V.draft.pts.length){const dl=Object.assign({},V.draft,{pts:V.draft.pts.concat(V.draft.cursor?[V.draft.cursor]:[])});const L2={floor:'',walls:'',set:'',beams:'',lines:'',grip:'',lights:'',cam:'',talent:'',labels:''};drawLine(dl,L2,{C,px,ghost:false},false);
@@ -1174,6 +1178,7 @@ cv.addEventListener('pointermove',e=>{
   }
   else if(drag.type==='bend'){clearSnapFx();bendDrag(it,w,e);}
   else if(drag.type==='rot'){let a=Math.atan2(w.y-it.y,w.x-it.x)/D2R;a=e.shiftKey?Math.round(a/15)*15:Math.round(a/5)*5;it.r=((a%360)+360)%360;if(it.r>180)it.r-=360;V.lastRot[it.t]=it.r;}
+  else if(drag.type==='scale'){const o=drag.orig;const d=Math.hypot(w.x-o.x,w.y-o.y);const v=Math.max(.3,Math.min(6,Math.round(d/(szBase(o)*1.06)/.05)*.05));if(Math.abs(v-1)<.03)delete it.sz;else it.sz=v;}
   else if(drag.type==='size'){const o=drag.orig;const a=(o.r||0)*D2R,c=Math.cos(a),s=Math.sin(a);const lx=(w.x-o.x)*c+(w.y-o.y)*s,ly=-(w.x-o.x)*s+(w.y-o.y)*c;
     const nw=Math.max(.25,sn(lx+o.w/2)),nh=Math.max(.25,sn(ly+o.h/2));const ox=(nw-o.w)/2,oy=(nh-o.h)/2;it.w=nw;it.h=nh;it.x=r2(o.x+ox*c-oy*s);it.y=r2(o.y+ox*s+oy*c);}
   renderCanvas();renderQuick();
@@ -1540,7 +1545,7 @@ function gearForItems(items,map,shotKey){
       if(it.t==='bounce'){add('Grip',`${it.size} ${it.fabric}`,1);if(it.standed){add('Grip — stands (for grip)','C-Stand',1);add('Grip — stands (for grip)','Sandbag',1,'est.');}return;}
       if(it.t==='vflat'){add('Grip',`V-flat (${it.side})`,1);return;}
       const sb={cstand:1,combo:2,rolling:1,menace:3}[it.t];add(sb?'Grip — stands (for grip)':'Grip',L.name,1);if(sb)add('Grip — stands (for grip)','Sandbag',sb,'est.');return;}
-    if(L.kind==='camera'){add('Camera',`${it.cam} Camera`,1);{const l=lensOf(it);add('Camera — lenses',l.id==='custom'?`${it.lens}mm lens`:l.name,1);if(l.mount==='F')add('Camera — lenses','Nikon F → Sony E lens adapter',1,'for ZF primes');}const sp={'Baby legs (100mm)':'100mm baby legs','Sticks (tripod)':'Sticks + head','Steadicam':'Steadicam','Gimbal':'Gimbal','Hi-hat':'Hi-hat','Car mount':'Car mount kit','Shoulder':'Shoulder rig'}[it.support];if(sp)add('Camera support',sp,1);return;}
+    if(L.kind==='camera'){add('Camera',`${it.cam} Camera`,1);{const l=lensOf(it);add('Camera — lenses',l.id==='custom'?`${it.lens}mm lens`:l.name,1);if(l.mount==='F')add('Camera — lenses','Nikon F → Sony E lens adapter',1,'for ZF primes');}const sp={'Baby legs (100mm)':'100mm baby legs','Sticks (tripod)':'Sticks + head','Steadicam':'Steadicam','Gimbal':'Gimbal','Hi-hat':'Hi-hat','Ladder + hi-hat':'Ladder (6′ A-frame) + hi-hat','Car mount':'Car mount kit','Shoulder':'Shoulder rig'}[it.support];if(sp)add('Camera support',sp,1);return;}
     if(L.kind==='camgear'){if(it.t==='boom')add('Sound','Boom pole + mic',1);else if(it.t==='village')add('Camera','Director’s monitor / village',1);else add('Camera support',L.name,1);return;}
     if(L.kind==='power'){if(it.t==='gen')add('Power & distro',`Generator (${fmtW(+it.capacity||0)} running)`,1);if(it.t==='distro')add('Power & distro','Distro box',1);return;}
   });
@@ -2066,7 +2071,7 @@ $('#sunQ')||document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target
 /* ============================================================
    Calculators dock (below the diagram): planning estimates tied to the plot
    ============================================================ */
-const CALC={open:false,tab:'sun',dof:{cam:'',act:'',stop:2.8,coc:'',show:true},lens:{cam:'',act:'',width:8},fall:{light:'',act:'',to:''}};
+const CALC={open:false,tab:'sun',dof:{cam:'',act:'',stop:2.8,coc:'',show:false},lens:{cam:'',act:'',width:8},fall:{light:'',act:'',to:''}};
 const camsNow=()=>activeItems().filter(i=>i.t==='camera'),actsNow=()=>activeItems().filter(i=>i.t==='actor'),lightsNow=()=>activeItems().filter(i=>LIB[i.t]&&LIB[i.t].kind==='light');
 const pick=(arr,id)=>arr.find(i=>i.id===id)||arr[0]||null;const distFt=(a,b)=>a&&b?Math.hypot(a.x-b.x,a.y-b.y):0;
 const camName=c=>`${c.cam||'A'} cam · ${lensLabel(c)}`;const lightName=l=>(l.label||LIB[l.t].name);
@@ -2105,7 +2110,7 @@ function dofOut(){const r=dofCalc();if(!r)return '<div class="pSub">Put a camera
 function calcDofHTML(){const D=CALC.dof;const cs=camsNow(),as=actsNow();const c=pick(cs,D.cam);
   return `<div class="cGrid"><div><h4>Depth of field</h4>${fld('Camera',`<select class="in" data-c="dof.cam">${selOpt(cs,c&&c.id,camName)}</select>`)}${fld('Focus on',`<select class="in" data-c="dof.act">${selOpt(as,(pick(as,D.act)||{}).id,a=>a.label||'Actor')}</select>`)}
    <div class="f2">${fld('Stop (T or f)',`<input class="in" type="number" step=".1" min=".7" data-c="dof.stop" value="${D.stop}">`)}${fld('Circle of confusion, mm',`<input class="in" data-c="dof.coc" value="${D.coc}" placeholder="${c?cocFor(c):.025}">`)}</div>
-   <label class="chk"><input type="checkbox" data-c="dof.show" ${D.show?'checked':''}> Draw the in-focus zone on the plot</label><div class="pSub" style="margin-top:6px">The distance is measured on the plot from the camera to the actor. Change the lens in the camera’s own settings.</div></div>
+   <label class="chk"><input type="checkbox" data-c="dof.show" ${D.show?'checked':''}> Draw the in-focus zone on the plot <span style="font-weight:400">(it stays after you close this)</span></label><div class="pSub" style="margin-top:6px">The distance is measured on the plot from the camera to the actor. Change the lens in the camera’s own settings.</div></div>
    <div><h4>Result</h4><div id="calcOut">${dofOut()}</div></div></div>`;}
 function lensOut(){const L=CALC.lens;const c=pick(camsNow(),L.cam),a=pick(actsNow(),L.act);if(!c||!a)return '<div class="pSub">Put a camera and an actor on the plot to measure between them.</div>';const sw=SENSORS[c.sensor]||21.18,d=distFt(c,a),W=Math.max(.5,+L.width||8);const f=sw*d/W;const row=(x,y,on)=>`<div class="kv"${on?' style="color:var(--amber2)"':''}><span>${x}</span><b>${y}</b></div>`;
   const fixed=LENSES.filter(l=>l.f);const best=fixed.slice().sort((p,q)=>Math.abs(p.f-f)-Math.abs(q.f-f))[0];let h=`<div class="cBig">about ${Math.round(f)}mm</div><div class="pSub" style="margin-bottom:6px">to see ${fmtFt(W)} across at ${fmtFt(d)} on this sensor</div>`;
@@ -2120,11 +2125,11 @@ function calcFallHTML(){const F=CALC.fall;const ls=lightsNow(),as=actsNow();
   return `<div class="cGrid"><div><h4>Light falloff</h4>${fld('Light',`<select class="in" data-c="fall.light">${selOpt(ls,(pick(ls,F.light)||{}).id,lightName)}</select>`)}${fld('Lighting',`<select class="in" data-c="fall.act">${selOpt(as,(pick(as,F.act)||{}).id,a=>a.label||'Actor')}</select>`)}${fld('If the light moves to this distance',`<input class="in" data-c="fall.to" value="${esc(F.to)}" placeholder="e.g. 9 or 9' 6&quot;">`)}<div class="pSub">Uses the inverse-square rule, which fits small, hard sources. Large soft sources fall off more slowly up close, and it says nothing about how bright the light is to begin with.</div></div>
    <div><h4>Result</h4><div id="calcOut">${fallOut()}</div></div></div>`;}
 const CTABS=[['sun','Sun & Moon'],['dof','Depth of field'],['lens','Lens finder'],['fall','Light falloff']];
-function renderCalc(){const el=$('#calc');if(!el)return;el.classList.toggle('open',CALC.open);el.classList.toggle('dof',CALC.tab==='dof');const b=$('#bCalc');if(b)b.classList.toggle('on',CALC.open);if(!CALC.open){return;}
-  el.innerHTML=`<div class="cHead"><div class="seg">${CTABS.map(([k,n])=>`<button data-ctab="${k}" class="${CALC.tab===k?'on':''}">${n}</button>`).join('')}</div><span class="cNote"><b>Planning estimates, not measurements.</b> Use them to plan placement and confirm on set.</span><button class="btn sm" data-cclose="1">Close</button></div>`+(CALC.tab==='sun'?calcSunHTML():CALC.tab==='dof'?calcDofHTML():CALC.tab==='lens'?calcLensHTML():calcFallHTML());
+function renderCalc(){const el=$('#calc');if(!el)return;el.classList.toggle('open',CALC.open);el.classList.toggle('dof',CALC.tab==='dof');el.classList.toggle('min',!!CALC.min);const b=$('#bCalc');if(b)b.classList.toggle('on',CALC.open);if(!CALC.open){return;}
+  el.innerHTML=`<div class="cHead"><div class="seg">${CTABS.map(([k,n])=>`<button data-ctab="${k}" class="${CALC.tab===k?'on':''}">${n}</button>`).join('')}</div><span class="cNote"><b>Planning estimates, not measurements.</b> Use them to plan placement and confirm on set.</span><button class="btn sm" data-cmin="1" title="${CALC.min?'Show the calculator again':'Shrink to the tabs so you can see the plot'}">${CALC.min?'Expand':'Shrink'}</button><button class="btn sm" data-cclose="1">Close</button></div>`+(CALC.tab==='sun'?calcSunHTML():CALC.tab==='dof'?calcDofHTML():CALC.tab==='lens'?calcLensHTML():calcFallHTML());
   if(CALC.tab==='sun')sunMapInit();}
 function calcLive(){if(!CALC.open)return;const o=$('#calcOut');if(o)o.innerHTML=CALC.tab==='dof'?dofOut():CALC.tab==='lens'?lensOut():CALC.tab==='fall'?fallOut():o.innerHTML;if(CALC.tab==='sun'){const out=$('#sunOut');if(out)out.innerHTML=sunReadout();calcSky();}}
-$('#calc').addEventListener('click',e=>{const t=e.target.closest('[data-ctab],[data-cclose]');if(!t)return;if(t.dataset.cclose){CALC.open=false;renderCalc();renderCanvas();return;}CALC.tab=t.dataset.ctab;renderCalc();renderCanvas();});
+$('#calc').addEventListener('click',e=>{const t=e.target.closest('[data-ctab],[data-cclose],[data-cmin]');if(!t)return;if(t.dataset.cmin){CALC.min=!CALC.min;renderCalc();return;}if(t.dataset.cclose){CALC.open=false;renderCalc();renderCanvas();return;}CALC.tab=t.dataset.ctab;CALC.min=false;renderCalc();renderCanvas();});
 const calcSet=e=>{const k=e.target.dataset&&e.target.dataset.c;if(!k)return;const [a,b]=k.split('.');CALC[a][b]=e.target.type==='checkbox'?e.target.checked:e.target.value;if(e.type==='change'&&e.target.tagName==='SELECT')renderCalc();else calcLive();renderCanvas();};
 $('#calc').addEventListener('input',calcSet);$('#calc').addEventListener('change',calcSet);
 /* drag on the day chart to scrub the time */
@@ -2133,7 +2138,7 @@ $('#calc').addEventListener('input',calcSet);$('#calc').addEventListener('change
 {const _rt2=renderTools;renderTools=function(){_rt2();const vb=$('#viewBar');if(vb&&!vb.querySelector('#bCalc')){vb.insertAdjacentHTML('beforeend',`<button class="btn sm ${CALC.open?'on':''}" id="bCalc" title="Sun and moon, depth of field, lens finder and light falloff, worked out from this plot" style="margin-left:6px">Calculators</button>`);vb.querySelector('#bCalc').onclick=()=>{CALC.open=!CALC.open;renderCalc();renderCanvas();};}};}
 {const _ch=changed;changed=function(a,b){_ch(a,b);if(CALC.open){const el=$('#calc');if(el&&el.contains(document.activeElement)&&document.activeElement.tagName!=='BUTTON')calcLive();else if(CALC.tab!=='sun')renderCalc();else{calcLive();const sel=selItem();const ok=sel&&(isWall(sel)&&sel.pts.length===2||sel.t==='window'||sel.t==='door');['sunBear','sunBearGo','sunPick'].forEach(id=>{const x=$('#'+id);if(x)x.disabled=!ok;});const sb=$('#sunBear');if(sb)sb.placeholder=ok?'Compass reading, e.g. 210':'Select a wall first';}}};}
 /* in-focus zone on the plot */
-function dofSVG(o){if(!CALC.open||CALC.tab!=='dof'||!CALC.dof.show)return '';const r=dofCalc();if(!r||r.tooClose)return '';const c=r.c,px=o.px,C=o.C;const a0=(c.r||0)*D2R,hf=hfov(c)/2*D2R;const far=isFinite(r.far)?Math.min(r.far,80):80;
+function dofSVG(o){if(!CALC.dof.show)return '';const r=dofCalc();if(!r||r.tooClose)return '';const c=r.c,px=o.px,C=o.C;const a0=(c.r||0)*D2R,hf=hfov(c)/2*D2R;const far=isFinite(r.far)?Math.min(r.far,80):80;
   const P=(d,a)=>[c.x+d*Math.cos(a),c.y+d*Math.sin(a)];const [n1x,n1y]=P(r.near,a0-hf),[n2x,n2y]=P(r.near,a0+hf),[f1x,f1y]=P(far,a0-hf),[f2x,f2y]=P(far,a0+hf);const [lx,ly]=P(r.near,a0),[mx,my]=P(far,a0);
   return `<g pointer-events="none"><path d="M${n1x} ${n1y} A${r.near} ${r.near} 0 0 1 ${n2x} ${n2y} L${f2x} ${f2y} A${far} ${far} 0 0 0 ${f1x} ${f1y}Z" fill="#35d0ba" opacity=".13"/><path d="M${n1x} ${n1y} A${r.near} ${r.near} 0 0 1 ${n2x} ${n2y} M${f1x} ${f1y} A${far} ${far} 0 0 1 ${f2x} ${f2y}" fill="none" stroke="#35d0ba" stroke-width="${1.6*px}" stroke-dasharray="${5*px} ${4*px}"/><text x="${lx}" y="${ly}" text-anchor="middle" font-family="${C.font}" font-weight="700" font-size=".55" fill="#35d0ba" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}">near ${fmtFt(r.near)}</text><text x="${mx}" y="${my}" text-anchor="middle" font-family="${C.font}" font-weight="700" font-size=".55" fill="#35d0ba" paint-order="stroke" stroke="${C.bg}" stroke-width="${3*px}">far ${isFinite(r.far)?fmtFt(r.far):'∞'}</text></g>`;}
 {const _ri2=renderItems;renderItems=function(items,o){const L=_ri2(items,o);if(o&&!o.ghost&&o.dimSel){try{L.labels=(L.labels||'')+dofSVG(o);}catch(e){}}return L;};}
@@ -2459,14 +2464,14 @@ dofOut=function(){const D=CALC.dof;if(!D.sensor)seedDof(D.cam);const n=dofNums()
   h+=row('Focus on subject'+(D.two?' 1':''),fmtFt(n.s))+row('Lens and stop',`${n.f}mm at ${n.N}`)+row('Hyperfocal distance',fmtFt(n.H))+row('Circle of confusion',`${n.coc.toFixed(4)} mm <span style="color:var(--sub);font-weight:400">(sensor diagonal ÷ 1500)</span>`)+row('Horizontal angle of view',`${Math.round(n.hfov)}°`)+row('Frame at the subject',`${fmtFt(n.fw)} wide × ${fmtFt(n.fh)} high`);
   if(D.two){const d2=Math.max(1,n.s+(parseFt(D.stag)||0));h+=row(`Subject 2 at ${fmtFt(d2)}`,d2<n.near?'soft, in front of focus':d2>n.far?'soft, behind focus':'in focus');}
   const Dbg=dofBgDist(n);const bp=n.blurAt(Dbg)/n.S.w*100;h+=row(`Background at ${fmtFt(Dbg)}`+(Dbg>(parseFt(D.bgDist)||15)+.01?' <span style="color:var(--sub);font-weight:400">(moved behind the subjects)</span>':''),Dbg<=n.far?'in focus':(bp<.6?'slightly soft':bp<2?'soft':'very soft')+` <span style="color:var(--sub);font-weight:400">(blur ≈ ${bp.toFixed(1)}% of frame width)</span>`);
-  return `<div class="cGrid" style="grid-template-columns:minmax(300px,1.4fr) minmax(220px,1fr)"><div>${dofMock(n)}</div><div>${h}</div></div>`;};
+  return `<div class="cGrid"><div>${dofMock(n)}</div><div>${h}</div></div>`;};
 calcDofHTML=function(){const D=CALC.dof;const cs=camsNow();if(!D.sensor)seedDof(D.cam||(cs[0]||{}).id);const num=(lab,k,v,extra)=>fld(lab,`<input class="in" data-c="dof.${k}" value="${esc(v)}" ${extra||''}>`);
   const sOpt=Object.keys(SENSORS).map(k=>`<option ${k===D.sensor?'selected':''}>${esc(k)}</option>`).join('');const lensList=[...new Set([...LENSES.filter(l=>l.f).map(l=>l.f),12,16,18,21,25,28,32,35,40,50,65,75,85,100,135])].sort((a,b)=>a-b);
   return `<div id="calcOut" style="margin-bottom:12px">${dofOut()}</div><div class="cGrid"><div><h4>Camera and lens</h4>${fld('Camera',`<select class="in" data-c="dof.cam">${cs.map(c=>`<option value="${c.id}" ${c.id===D.cam?'selected':''}>${esc(camName(c))}</option>`).join('')}<option value="manual" ${D.cam==='manual'||!cs.length?'selected':''}>Not tied to the plot</option></select>`)}
      ${fld('Sensor or film format',`<select class="in" data-c="dof.sensor">${sOpt}</select>`)}
      <div class="f2">${num('Focal length (mm)','f',D.f,'type="number" min="4" max="600" step="1" list="dofLens"')}${fld('Stop',`<select class="in" data-c="dof.stop">${STOPS.map(s=>`<option ${String(D.stop)===s?'selected':''}>${s}</option>`).join('')}</select>`)}</div><datalist id="dofLens">${lensList.map(f=>`<option value="${f}">`).join('')}</datalist>
      ${num('Focus distance to the subject','dist',D.dist,'placeholder="e.g. 8 or 8\' 6&quot;"')}${D.cam&&D.cam!=='manual'&&actsNow().length?`<button class="btn sm" data-dofseed="1">Measure from the plot</button>`:''}
-     <label class="chk" style="margin-top:8px"><input type="checkbox" data-c="dof.show" ${D.show?'checked':''}> Draw the in-focus zone on the plot</label></div>
+     <label class="chk" style="margin-top:8px"><input type="checkbox" data-c="dof.show" ${D.show?'checked':''}> Draw the in-focus zone on the plot <span style="font-weight:400">(it stays after you close this)</span></label></div>
    <div><h4>Scene</h4>${fld('Background',`<select class="in" data-c="dof.bg">${DOFBG.map(([k,n])=>`<option value="${k}" ${D.bg===k?'selected':''}>${n}</option>`).join('')}</select>`)}${num('Background distance from camera','bgDist',D.bgDist)}
      <div class="f"><label>Subjects</label><div class="seg"><button data-dofsub="1" class="${D.two?'':'on'}">One</button><button data-dofsub="2" class="${D.two?'on':''}">Two</button></div></div>
      ${D.two?`${num('Subject 2 behind subject 1 (use a minus for in front)','stag',D.stag)}${num('Side to side between them','apart',D.apart)}`:''}
@@ -2761,7 +2766,7 @@ const SEQ_ANGLE={'overhead':'Overhead','high angle':'High','low angle':'Low','du
 const SEQ_MOVE={'static':'Static','tracking':'Dolly / track','truck':'Dolly / track','follow':'Dolly / track','lead':'Dolly / track','dolly in':'Push in','push in':'Push in','dolly out':'Pull out','pull out':'Pull out','arc':'Arc',
   'pan':'Pan','tilt':'Tilt','pan & tilt':'Pan','whip pan':'Whip pan','boom up':'Crane / jib','boom down':'Crane / jib','crane up':'Crane / jib','crane down':'Crane / jib','zoom in':'Zoom','zoom out':'Zoom','dolly zoom':'Zoom',
   'handheld float':'Handheld','handheld':'Handheld','steadicam':'Steadicam / gimbal','gimbal':'Steadicam / gimbal'};
-const SEQ_RIG={'sticks':'Sticks (tripod)','baby legs':'Baby legs (100mm)','hi-hat':'Hi-hat','handheld':'Handheld','shoulder rig':'Shoulder','easy rig':'Shoulder','ground / sandbag':'Hi-hat','apple box':'Hi-hat',
+const SEQ_RIG={'ladder':'Ladder + hi-hat','ladder + hi-hat':'Ladder + hi-hat','sticks':'Sticks (tripod)','baby legs':'Baby legs (100mm)','hi-hat':'Hi-hat','handheld':'Handheld','shoulder rig':'Shoulder','easy rig':'Shoulder','ground / sandbag':'Hi-hat','apple box':'Hi-hat',
   'dolly (track)':'Dolly','doorway dolly':'Dolly','wheelchair dolly':'Dolly','slider':'Slider','gimbal':'Gimbal','steadicam':'Steadicam','jib':'Jib / crane','crane':'Jib / crane'};
 // words that mean the same thing in both tools; anything else that gets translated keeps its original word in Notes
 const SEQ_SAME=new Set(['wide','full shot','mw','medium','two shot','tracking','dolly in','dolly out','push in','pull out','pan','tilt','whip pan','arc','handheld','static','steadicam','gimbal']);
@@ -3031,6 +3036,23 @@ function migrateBlocking(p){if(!p)return p;
   p.blockV=2;return p;}
 {const _n=normalize;normalize=function(p){return migrateBlocking(_n(p));};}
 {const _d=demoProject;demoProject=function(){return migrateBlocking(_d());};}
+/* ============================================================
+   Size for every element: one scale per item (sz), shown in the quick bar and as a corner handle.
+   Set pieces keep real width/depth; text keeps its font size; frames keep their real frame size.
+   ============================================================ */
+const SZ_KINDS=['light','camera','talent','mark','grip','camgear','power'];
+function scalable(it){const L=it&&LIB[it.t];return !!(L&&SZ_KINDS.includes(L.kind)&&it.t!=='frame');}
+function szOf(it){return scalable(it)&&+it.sz>0?+it.sz:1;}
+function szBase(it){const L=LIB[it.t]||{};if(L.kind==='light')return (L.s||1)*.9+.2;if(L.kind==='grip')return Math.max(.6,gripExtent(Object.assign({},it,{sz:1}))-.4);if(L.kind==='camera')return 1.1;if(L.kind==='talent')return .9;if(L.kind==='mark')return .6;return 1;}
+{const _h=handleR;handleR=function(it){const r=_h(it);return scalable(it)?r*szOf(it):r;};}
+/* quick bar: Size % */
+{const _rq=renderQuick;renderQuick=function(){_rq();const q=$('#quick');if(!q||!q.innerHTML||fromQuick)return;const it=selItem();if(!it||selIds().length!==1||!scalable(it))return;const sep=q.querySelector('.qsep');if(!sep)return;
+  sep.insertAdjacentHTML('beforebegin',`<label class="qf" title="How big it is drawn on the plot (100% is the standard size)">Size<input class="in" data-sz="1" type="number" min="30" max="600" step="10" value="${Math.round(szOf(it)*100)}" style="width:58px"><span>%</span></label>`);};}
+document.addEventListener('change',e=>{const t=e.target;if(!t.matches||!t.matches('#quick [data-sz]'))return;const it=selItem();if(!it||!scalable(it))return;const v=Math.max(30,Math.min(600,+t.value||100));snap();if(Math.abs(v-100)<1)delete it.sz;else it.sz=v/100;changed();});
+/* camera on a ladder: 6' A-frame stepladder with a hi-hat on the top cap */
+function ladderGlyph(C,px){const col=C.grip||'#c9b28a';let r='';for(let i=-1;i<=1;i+=.5)r+=`<line x1="${i}" y1="-.85" x2="${i}" y2=".85" stroke="${col}" stroke-width="${1.2*px}"/>`;
+  return `<rect x="-1.75" y="-1" width="3.5" height="2" rx=".08" fill="${col}" fill-opacity=".08" stroke="${col}" stroke-width="${1.6*px}"/><line x1="-1.75" y1="-.85" x2="1.75" y2="-.85" stroke="${col}" stroke-width="${1.6*px}"/><line x1="-1.75" y1=".85" x2="1.75" y2=".85" stroke="${col}" stroke-width="${1.6*px}"/>${r}<rect x="-.45" y="-.45" width=".9" height=".9" fill="none" stroke="${col}" stroke-width="${1.2*px}" stroke-dasharray="${3*px} ${2*px}"/>`;}
+{const _af=applyField;applyField=function(el,live){const r=_af(el,live);try{if(el&&el.dataset&&el.dataset.k==='support'&&el.value==='Ladder + hi-hat'){const it=selItem();if(it&&it.t==='camera'&&(+it.height||0)<6.5){it.height=7;renderCanvas();if(UI.R)renderPanel();}}}catch(e){}return r;};}
 const BRANDFF=(()=>{let o='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.type===5&&/EB Garamond|Lato/.test(r.cssText))o+=r.cssText;}catch(e){}}return o;})();
 /* ============================================================
    Export
