@@ -309,6 +309,10 @@ body.narrow #left{left:0} body.narrow #right{right:0}
 .measBox{position:absolute;z-index:8;display:flex;align-items:center;gap:6px;background:rgba(23,25,28,.97);border:1px solid #5a2380;border-radius:8px;padding:5px 6px 5px 10px;box-shadow:0 8px 22px rgba(0,0,0,.45)}
 .measBox b{font-family:var(--mono,monospace);color:var(--text);margin-right:4px}
 :root[data-theme="light"] .measBox{background:rgba(247,248,250,.98)}
+#tree .dBefore{box-shadow:0 -2px 0 var(--amber)}#tree .dAfter{box-shadow:0 2px 0 var(--amber)}
+#tree .shotChip.dBefore{box-shadow:-3px 0 0 var(--amber)}#tree .shotChip.dAfter{box-shadow:3px 0 0 var(--amber)}
+#tree .dInto{outline:2px dashed var(--amber);outline-offset:1px;border-radius:6px}#tree .dSrc{opacity:.45}
+#tree .sRow[draggable],#tree .suRow[draggable]{cursor:grab}
 </style>
 </head>
 <body>
@@ -3093,6 +3097,49 @@ window.addEventListener('keydown',e=>{const tag=(e.target&&e.target.tagName)||''
   if(V.tool==='measure'&&e.key==='Escape'){if(V.meas){V.meas=null;measBox(false);renderCanvas();e.stopImmediatePropagation();}return;}
   if(!e.metaKey&&!e.ctrlKey&&!e.altKey&&e.key.toLowerCase()==='l'&&!$('#modal.open')){e.stopImmediatePropagation();e.preventDefault();V.placing=null;setTool(V.tool==='measure'?'select':'measure');}},true);
 {const _rc=renderCanvas;renderCanvas=function(){_rc();if(V.meas&&V.meas.done&&$('#measBox'))measBox(true);};}
+/* ============================================================
+   Breakdown drag and drop: reorder scenes, move setups between scenes, move or reorder shots anywhere.
+   Drop on a line between rows to place it there; drop on a scene to add it to that scene.
+   ============================================================ */
+{const tree=$('#tree');let D=null;
+  const clear=()=>tree.querySelectorAll('.dBefore,.dAfter,.dInto').forEach(n=>n.classList.remove('dBefore','dAfter','dInto'));
+  const scOf=id=>P.scenes.find(s=>s.id===id);
+  const suOf=id=>{for(const sc of P.scenes){const su=sc.setups.find(s=>s.id===id);if(su)return {sc,su};}return null;};
+  const shOf=id=>{for(const sc of P.scenes)for(const su of sc.setups){const sh=su.shots.find(s=>s.id===id);if(sh)return {sc,su,sh};}return null;};
+  const keepScene=sc=>{if(!sc.setups.length){const su=mkSetup('Setup A');su.shots.push(mkShot(nextShotNum(sc)));sc.setups.push(su);}};
+  const renum=(sc,shots)=>shots.forEach(s=>{s.num='';s.num=nextShotNum(sc);});
+  // where would this drop land?
+  function target(e){if(!D)return null;const t=e.target;
+    if(D.k==='shot'){const chip=t.closest('.shotChip[data-shot]');if(chip&&chip.dataset.shot!==D.id){const r=chip.getBoundingClientRect();return {el:chip,cls:e.clientX<r.left+r.width/2?'dBefore':'dAfter',kind:'shot',id:chip.dataset.shot};}
+      const su=t.closest('.setup');if(su){const row=su.querySelector('[data-setup]');return {el:su,cls:'dInto',kind:'setup',id:row.dataset.setup};}
+      const sr=t.closest('.sRow[data-scene]');if(sr)return {el:sr,cls:'dInto',kind:'scene',id:sr.dataset.scene};return null;}
+    if(D.k==='setup'){const row=t.closest('.suRow[data-setup]');if(row&&row.dataset.setup!==D.id){const r=row.getBoundingClientRect();return {el:row,cls:e.clientY<r.top+r.height/2?'dBefore':'dAfter',kind:'setup',id:row.dataset.setup};}
+      const sr=t.closest('.sRow[data-scene]');if(sr){const f=suOf(D.id);if(f&&f.sc.id===sr.dataset.scene)return null;return {el:sr,cls:'dInto',kind:'scene',id:sr.dataset.scene};}return null;}
+    if(D.k==='scene'){const sr=t.closest('.sRow[data-scene]');if(sr&&sr.dataset.scene!==D.id){const r=sr.getBoundingClientRect();return {el:sr,cls:e.clientY<r.top+r.height/2?'dBefore':'dAfter',kind:'scene',id:sr.dataset.scene};}return null;}
+    return null;}
+  tree.addEventListener('dragstart',e=>{const t=e.target;let k=null,id=null;
+    const chip=t.closest&&t.closest('.shotChip[data-shot]'),row=t.closest&&t.closest('.suRow[data-setup]'),sr=t.closest&&t.closest('.sRow[data-scene]');
+    if(chip){k='shot';id=chip.dataset.shot;}else if(row){k='setup';id=row.dataset.setup;}else if(sr){k='scene';id=sr.dataset.scene;}
+    if(!k)return;e.stopPropagation();D={k,id};try{e.dataTransfer.setData('text/plain',k+':'+id);e.dataTransfer.effectAllowed='move';}catch(x){}
+    (chip||row||sr).classList.add('dSrc');},true);
+  tree.addEventListener('dragover',e=>{if(!D)return;e.stopPropagation();const g=target(e);clear();if(!g)return;e.preventDefault();e.dataTransfer.dropEffect='move';g.el.classList.add(g.cls);},true);
+  tree.addEventListener('dragleave',e=>{if(D&&!tree.contains(e.relatedTarget))clear();},true);
+  tree.addEventListener('dragend',()=>{D=null;clear();tree.querySelectorAll('.dSrc').forEach(n=>n.classList.remove('dSrc'));},true);
+  tree.addEventListener('drop',e=>{if(!D)return;e.stopPropagation();e.preventDefault();const g=target(e);clear();const d=D;D=null;if(!g)return;let msg='';
+    if(d.k==='scene'){const a=P.scenes.findIndex(s=>s.id===d.id);if(a<0)return;snap();const [sc]=P.scenes.splice(a,1);let b=P.scenes.findIndex(s=>s.id===g.id);if(g.cls==='dAfter')b++;P.scenes.splice(b,0,sc);msg=`Scene ${sc.num} moved`;}
+    else if(d.k==='setup'){const f=suOf(d.id);if(!f)return;snap();f.sc.setups.splice(f.sc.setups.indexOf(f.su),1);
+      let dest,idx;if(g.kind==='scene'){dest=scOf(g.id);idx=dest.setups.length;}else{const t2=suOf(g.id);dest=t2.sc;idx=dest.setups.indexOf(t2.su)+(g.cls==='dAfter'?1:0);}
+      dest.setups.splice(idx,0,f.su);if(dest!==f.sc){if(dest.setups.some(s=>s!==f.su&&s.name===f.su.name))f.su.name=f.su.name+' ('+f.sc.num+')';const shots=f.su.shots.slice();renum(dest,shots);keepScene(f.sc);msg=`${f.su.name} moved to scene ${dest.num}; its shots are now ${shots.map(s=>s.num).join(', ')}`;}else msg=`${f.su.name} moved`;
+      V.sceneId=dest.id;V.setupId=f.su.id;V.shotId=f.su.shots[0].id;}
+    else{const f=shOf(d.id);if(!f)return;let dest,to,idx;
+      if(g.kind==='shot'){const t2=shOf(g.id);dest=t2.sc;to=t2.su;}else if(g.kind==='setup'){const t2=suOf(g.id);dest=t2.sc;to=t2.su;}else{dest=scOf(g.id);to=dest.setups[dest.setups.length-1];}
+      if(!to)return;snap();f.su.shots.splice(f.su.shots.indexOf(f.sh),1);
+      if(g.kind==='shot'){idx=to.shots.findIndex(s=>s.id===g.id)+(g.cls==='dAfter'?1:0);}else idx=to.shots.length;to.shots.splice(idx,0,f.sh);
+      if(dest!==f.sc)renum(dest,[f.sh]);try{linkOrphans(P);}catch(x){}
+      const n1=tidySetups(f.sc);keepScene(f.sc);msg=dest!==f.sc?`Shot moved to scene ${dest.num} as ${f.sh.num} (${to.name})`:to!==f.su?`Shot ${f.sh.num} moved to ${to.name}`:`Shot ${f.sh.num} moved`;if(n1)msg+='. '+n1;
+      V.sceneId=dest.id;V.setupId=to.id;V.shotId=f.sh.id;}
+    V.sel=null;V.multi=[];fixView();changed();if(typeof renderTree==='function')renderTree();toast(msg,3500);},true);
+  {const _rt=renderTree;renderTree=function(){_rt();tree.querySelectorAll('.sRow[data-scene],.suRow[data-setup],.shotChip[data-shot]').forEach(n=>n.setAttribute('draggable','true'));};}}
 const BRANDFF=(()=>{let o='';for(const sh of document.styleSheets){try{for(const r of sh.cssRules)if(r.type===5&&/EB Garamond|Lato/.test(r.cssText))o+=r.cssText;}catch(e){}}return o;})();
 /* ============================================================
    Export
